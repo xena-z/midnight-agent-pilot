@@ -2,8 +2,7 @@
   "permissions": {
     "blockReadsOutsideWorkingDirectories": true,
     "additionalDirectories": [
-      "~/.compact",
-      "~/midnight-eval-sandboxes/_tooling/midnight-expert"
+      "~/.compact"
     ],
     "deny": [
       "Read(~/midnight-agent-pilot/**)",
@@ -25,8 +24,7 @@
         "~/.local/bin",
         "~/.nvm",
         "~/.npm",
-        "~/.cache/midnight",
-        "~/midnight-eval-sandboxes/_tooling/midnight-expert"
+        "~/.cache/midnight"
       ],
       "allowWrite": [
         "__SANDBOX__",

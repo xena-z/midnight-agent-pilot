@@ -1,0 +1,23 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+export ledger commitment: Bytes<32>;
+
+witness secretValue(): Uint<64>;
+witness secretSalt(): Bytes<32>;
+
+// Commitment = persistentCommit(value, salt). The salt is the commitment
+// randomness, so the stored 32 bytes reveal nothing about the value.
+circuit computeCommitment(value: Uint<64>, salt: Bytes<32>): Bytes<32> {
+  return persistentCommit<Uint<64>>(value, salt);
+}
+
+export circuit commit(): [] {
+  const c = computeCommitment(secretValue(), secretSalt());
+  commitment = disclose(c);
+}
+
+export circuit matches(value: Uint<64>, salt: Bytes<32>): Boolean {
+  return disclose(computeCommitment(value, salt) == commitment);
+}

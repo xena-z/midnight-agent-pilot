@@ -1,5 +1,6 @@
-date,setup,task,run,model,compact_version,harness_commit,compiled_first,compiled_final,tests_pass_first,tests_pass_final,verified_before_claiming_done,interventions,hallucinated_apis,privacy_errors,agent_turns,minutes,cost_usd,web_lookups,mcp_calls,skill_calls,hook_outputs,failure_tags,notes
-2026-11-05,A,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,3,0.2,0.06,0,0,0,0,,
-2026-11-05,B,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.3,0.06,0,0,0,0,,
-2026-11-05,R,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.3,0.06,0,0,0,0,,
-2026-11-05,C,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.4,0.12,0,0,0,2,,
+date,setup,task,run,model,compact_version,harness_commit,compiled_first,compiled_final,tests_pass_first,tests_pass_final,verified_before_claiming_done,interventions,hallucinated_apis,privacy_errors,agent_turns,minutes,cost_usd,web_lookups,mcp_calls,skill_calls,hook_outputs,compile_attempts,compile_failures,failure_tags,notes
+2026-11-05,C,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.4,0.12,0,0,0,2,1,0,,
+2026-11-05,C,02-token,1,claude-sonnet-5-5,0.36.0,3850d39-dirty,true,true,true,true,true,0,,,18,1.7,0.29,0,0,0,2,3,2,,dirty flag came from untracked files in tasks/06-consent only; task 02 and harness unchanged at 3850d39
+2026-11-05,C,03-private-input,1,claude-sonnet-5-5,0.36.0,ec26cb6,true,true,true,true,true,0,,,3,0.6,0.13,0,0,0,2,1,0,,
+2026-11-05,C,04-disclosure-trap,1,claude-sonnet-5-5,0.36.0,ec26cb6,true,true,true,true,true,0,,,3,0.4,0.12,0,0,0,2,2,0,,
+2026-11-05,C,05-sealed-vote,1,claude-sonnet-5-5,0.36.0,ec26cb6,true,true,true,true,true,0,,,13,3.1,0.25,0,0,1,2,3,0,,

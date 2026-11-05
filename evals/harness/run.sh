@@ -60,7 +60,17 @@ PROMPT="$(cat "$TASK_DIR/prompt.md")"
 # Per-run access policy (same for every setup): the agent can read and write its own sandbox, the toolchain,
 # caches, /tmp and the pinned plugin clone, and nothing else in $HOME. Enforced by the OS for Bash
 # (Claude Code's sandbox) and by permission rules for Claude's own file tools.
-sed "s#__SANDBOX__#$SANDBOX#g" "$H/setups/eval-settings.json" > "$OUT/settings.json"
+# Only setup C may read the pinned Midnight Expert clone (its plugins load from there). Claude Code lists
+# additional directories in the agent's instructions, so for A/B/R the clone must not be mentioned at all.
+python3 -I - "$H/setups/eval-settings.json" "$OUT/settings.json" "$SANDBOX" "$SETUP" "$PLUGIN_ROOT" <<'PY'
+import json, sys
+src, dst, sandbox, setup, plugin_root = sys.argv[1:]
+d = json.loads(open(src).read().replace("__SANDBOX__", sandbox))
+if setup == "C":
+    d["permissions"]["additionalDirectories"].append(plugin_root)
+    d["sandbox"]["filesystem"]["allowRead"].append(plugin_root)
+open(dst, "w").write(json.dumps(d, indent=2) + "\n")
+PY
 
 PLUGIN_FLAGS=(); PLUGIN_SHA_USED=""
 if [ "$SETUP" = "C" ]; then
@@ -89,6 +99,10 @@ rc="$(agent "$PHASE1_TIMEOUT" "$OUT/phase1.jsonl" -p "$PROMPT")"
 
 if ! INIT="$(cd "$EVALS" && npx --no tsx harness/parse-run.ts check-init "$SETUP" "$OUT/phase1.jsonl")"; then
   echo "$INIT" | tee "$OUT/VOID"; exit 1
+fi
+
+if ! CONTAM="$(cd "$EVALS" && npx --no tsx harness/parse-run.ts check-contamination "$SETUP" "$OUT/phase1.jsonl")"; then
+  echo "$CONTAM" | tee "$OUT/VOID"; exit 1
 fi
 
 LAST="$(cd "$EVALS" && npx --no tsx harness/parse-run.ts last-result "$OUT/phase1.jsonl")"

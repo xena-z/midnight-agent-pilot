@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-05",
+  "setup": "A",
+  "task": "02-token",
+  "run": 1,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "3850d39",
+  "interventions": 0,
+  "minutes": 0.9,
+  "plugin_sha": "",
+  "session_id": "c6ff0ea9-0fb3-4c4c-8329-f810506080de",
+  "notes": []
+}

@@ -1,0 +1,65 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Simple fungible token with balances kept on the public ledger.
+
+// Public ledger state.
+export ledger totalSupply: Uint<64>;           // always == sum of all balances
+ledger balances: Map<Bytes<32>, Uint<64>>;     // account address -> balance
+ledger admin: Bytes<32>;                       // address of the deployer; only one who may mint
+
+// The caller's secret key (supplied privately by the DApp, never on-chain).
+witness secretKey(): Bytes<32>;
+
+// Account address derived from a secret key.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+constructor() {
+  totalSupply = 0;
+  admin = disclose(publicKey(secretKey()));
+}
+
+// Caller's own account address.
+circuit caller(): Bytes<32> {
+  return disclose(publicKey(secretKey()));
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  const a = disclose(account);
+  return balances.member(a) ? balances.lookup(a) : 0;
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(caller() == admin, "Only the admin can mint");
+  const t = disclose(to);
+  const amt = disclose(amount);
+  // Uint<64> casts fail if the sum overflows, so totalSupply cannot wrap.
+  const newSupply = (totalSupply + amt) as Uint<64>;
+  const newBal = (balanceOf(t) + amt) as Uint<64>;
+  balances.insert(t, newBal);
+  totalSupply = newSupply;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = caller();
+  const t = disclose(to);
+  const amt = disclose(amount);
+  const senderBal = balanceOf(sender);
+  assert(senderBal >= amt, "Insufficient balance");
+  // Debit first, then credit, so a self-transfer leaves the balance unchanged.
+  balances.insert(sender, (senderBal - amt) as Uint<64>);
+  const newTo = (balanceOf(t) + amt) as Uint<64>;
+  balances.insert(t, newTo);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = caller();
+  const amt = disclose(amount);
+  const senderBal = balanceOf(sender);
+  assert(senderBal >= amt, "Insufficient balance");
+  balances.insert(sender, (senderBal - amt) as Uint<64>);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+}

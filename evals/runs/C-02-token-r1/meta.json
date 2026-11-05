@@ -1,0 +1,15 @@
+{
+  "date": "2026-11-05",
+  "setup": "C",
+  "task": "02-token",
+  "run": 1,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "3850d39-dirty",
+  "interventions": 0,
+  "minutes": 1.7,
+  "plugin_sha": "212d7c2cdadef9a52d84cbd0c83c81bc79930b6b",
+  "session_id": "2b21fbb0-9267-4bb7-9b42-ac8290afa847",
+  "notes": [
+    "dirty flag came from untracked files in tasks/06-consent only; task 02 and harness unchanged at 3850d39"
+  ]
+}

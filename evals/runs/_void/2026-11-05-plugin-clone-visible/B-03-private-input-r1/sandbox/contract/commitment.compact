@@ -1,0 +1,21 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+// Public ledger: only the hiding commitment is ever stored.
+export ledger commitment: Bytes<32>;
+
+// Private inputs, supplied by the user's local environment.
+witness secretValue(): Uint<64>;
+witness secretSalt(): Bytes<32>;
+
+// Store a commitment to the private value. The salt is used as the
+// commitment's randomness, so the value cannot be guessed from the ledger.
+export circuit commit(): [] {
+  commitment = persistentCommit<Uint<64>>(secretValue(), secretSalt());
+}
+
+// Check whether (value, salt) open the stored commitment.
+export circuit matches(value: Uint<64>, salt: Bytes<32>): Boolean {
+  return persistentCommit<Uint<64>>(value, salt) == commitment;
+}

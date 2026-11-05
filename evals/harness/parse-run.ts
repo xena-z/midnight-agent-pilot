@@ -15,6 +15,7 @@ export const CSV_COLUMNS = [
   'compiled_first', 'compiled_final', 'tests_pass_first', 'tests_pass_final',
   'verified_before_claiming_done', 'interventions', 'hallucinated_apis', 'privacy_errors',
   'agent_turns', 'minutes', 'cost_usd', 'web_lookups', 'mcp_calls', 'skill_calls', 'hook_outputs',
+  'compile_attempts', 'compile_failures',
   'failure_tags', 'notes',
 ] as const;
 
@@ -65,6 +66,39 @@ export function verifiedBeforeDone(events: Event[]): boolean {
 }
 
 function results(events: Event[]): Event[] { return events.filter((e) => e.type === 'result'); }
+
+/** Compiler runs and how many of them failed (phase 1: what the agent fixed on its own). */
+export function compileStats(events: Event[]): { attempts: number; failures: number } {
+  const resultsById = new Map<string, { isError: boolean; text: string }>();
+  for (const e of events) {
+    if (e.type !== 'user') continue;
+    for (const b of e.message?.content ?? []) {
+      if (b?.type !== 'tool_result') continue;
+      const text = typeof b.content === 'string' ? b.content : JSON.stringify(b.content ?? '');
+      resultsById.set(b.tool_use_id, { isError: !!b.is_error, text });
+    }
+  }
+  let attempts = 0, failures = 0;
+  for (const e of events) {
+    if (e.type !== 'assistant') continue;
+    for (const b of e.message?.content ?? []) {
+      if (b.type !== 'tool_use' || b.name !== 'Bash') continue;
+      const cmd = String(b.input?.command ?? '');
+      if (!COMPILE_RE.test(cmd) || /--(version|language-version|runtime-version|ledger-version|help)\b/.test(cmd)) continue;
+      attempts++;
+      const r = resultsById.get(b.id);
+      if (r && (r.isError || /Exception:|parse error|potential witness-value disclosure/.test(r.text))) failures++;
+    }
+  }
+  return { attempts, failures };
+}
+
+/** Setups other than C must never touch Midnight Expert's files. */
+function checkContamination(setup: string, file: string): string[] {
+  if (setup === 'C') return [];
+  const hits = toolUses(readEvents(file)).filter((t) => /_tooling|midnight-expert/.test(JSON.stringify(t.input)));
+  return hits.length ? [`setup ${setup} touched Midnight Expert files in ${hits.length} tool call(s)`] : [];
+}
 
 function checkInit(setup: string, file: string): string[] {
   const init = readEvents(file).find((e) => e.type === 'system' && e.subtype === 'init');
@@ -145,6 +179,8 @@ function row(dir: string): string {
     skill_calls: tools.filter((t) => t.name === 'Skill').length,
     // Plugin hooks (e.g. SessionStart) can inject guidance without any tool call; count the ones that returned output.
     hook_outputs: all.filter((e) => e.type === 'system' && e.subtype === 'hook_response' && String(e.output ?? '').trim()).length,
+    compile_attempts: compileStats(phase1).attempts,
+    compile_failures: compileStats(phase1).failures,
     failure_tags: '', // manual review
     notes: notes.join('; '),
   };
@@ -156,6 +192,10 @@ if (cmd === 'check-init') {
   const problems = checkInit(a, b);
   if (problems.length) { console.log(`VOID: ${problems.join('; ')}`); process.exit(1); }
   console.log('init ok');
+} else if (cmd === 'check-contamination') {
+  const problems = checkContamination(a, b);
+  if (problems.length) { console.log(`VOID: ${problems.join('; ')}`); process.exit(1); }
+  console.log('no contamination');
 } else if (cmd === 'last-result') {
   console.log(JSON.stringify(lastResult(a)));
 } else if (cmd === 'row') {

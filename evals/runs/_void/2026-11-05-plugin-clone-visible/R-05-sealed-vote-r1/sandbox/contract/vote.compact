@@ -1,0 +1,57 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+export enum Phase { commit, reveal }
+
+witness secretKey(): Bytes<32>;
+witness myVote(): Boolean;
+witness voteSalt(): Bytes<32>;
+
+export ledger phase: Phase;
+export ledger admin: Bytes<32>;
+export ledger commitments: Map<Bytes<32>, Bytes<32>>;
+export ledger revealed: Set<Bytes<32>>;
+export ledger yes: Counter;
+export ledger no: Counter;
+
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "sealed-vote:pk"), sk]);
+}
+
+// Hiding + binding commitment to the vote: the salt is secret and random.
+circuit voteCommitment(vote: Boolean, salt: Bytes<32>): Bytes<32> {
+  const v: Bytes<32> = vote ? pad(32, "yes") : pad(32, "no");
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "sealed-vote:commit"), v, salt]);
+}
+
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  phase = Phase.commit;
+}
+
+export circuit commitVote(): [] {
+  assert(phase == Phase.commit, "Not in commit phase");
+  const pk = publicKey(secretKey());
+  assert(!commitments.member(disclose(pk)), "Already committed");
+  const c = voteCommitment(myVote(), voteSalt());
+  commitments.insert(disclose(pk), disclose(c));
+}
+
+export circuit closeCommits(): [] {
+  assert(phase == Phase.commit, "Not in commit phase");
+  assert(publicKey(secretKey()) == admin, "Only admin");
+  phase = Phase.reveal;
+}
+
+export circuit revealVote(): [] {
+  assert(phase == Phase.reveal, "Not in reveal phase");
+  const pk = disclose(publicKey(secretKey()));
+  assert(commitments.member(pk), "No commitment");
+  assert(!revealed.member(pk), "Already revealed");
+  const vote = disclose(myVote());
+  const c = voteCommitment(myVote(), voteSalt());
+  assert(commitments.lookup(pk) == disclose(c), "Vote does not match commitment");
+  revealed.insert(pk);
+  if (vote) { yes.increment(1); } else { no.increment(1); }
+}

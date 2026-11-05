@@ -1,0 +1,58 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Simple fungible token with balances on the public ledger.
+
+// account address -> balance
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+// Invariant: always equals the sum of all entries in `balances`.
+export ledger totalSupply: Uint<64>;
+// Address of the deployer.
+export ledger admin: Bytes<32>;
+
+witness secretKey(): Bytes<32>;
+
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  const a = disclose(account);
+  return balances.member(a) ? balances.lookup(a) : 0;
+}
+
+circuit credit(account: Bytes<32>, amount: Uint<64>): [] {
+  const current = balanceOf(account);
+  // Uint<64> + Uint<64> is widened; the cast fails (aborts) on overflow.
+  balances.insert(disclose(account), (current + amount) as Uint<64>);
+}
+
+circuit debit(account: Bytes<32>, amount: Uint<64>): [] {
+  const current = balanceOf(account);
+  assert(current >= amount, "Insufficient balance");
+  balances.insert(disclose(account), (current - amount) as Uint<64>);
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(publicKey(secretKey()) == admin, "Only admin can mint");
+  credit(to, disclose(amount));
+  totalSupply = (totalSupply + disclose(amount)) as Uint<64>;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = publicKey(secretKey());
+  debit(sender, disclose(amount));
+  credit(to, disclose(amount));
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = publicKey(secretKey());
+  debit(sender, disclose(amount));
+  totalSupply = (totalSupply - disclose(amount)) as Uint<64>;
+}
