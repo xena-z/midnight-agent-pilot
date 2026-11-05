@@ -38,6 +38,10 @@ if [ "$MODE" = "--smoke" ]; then OUT="$EVALS/runs/_smoke/$RUN_ID"; SANDBOX="$SAN
 else OUT="$EVALS/runs/$RUN_ID"; SANDBOX="$SANDBOX_ROOT/$SETUP/$TASK-r$RUN"; fi
 [ -e "$OUT" ] && { echo "$OUT exists; never overwrite a scored run" >&2; exit 1; }
 [ -e "$SANDBOX" ] && { echo "$SANDBOX exists; sandboxes must be fresh" >&2; exit 1; }
+# Claude Code keeps auto-memory per project path; a reused path must not inherit an earlier run's memory.
+PROJ_STATE="$EVAL_CONFIG/projects/$(printf '%s' "$SANDBOX" | sed 's/[^A-Za-z0-9]/-/g')"
+if [ "$MODE" = "--smoke" ]; then rm -rf "$PROJ_STATE"
+elif [ -e "$PROJ_STATE" ]; then echo "$PROJ_STATE exists; an earlier run used this sandbox path" >&2; exit 1; fi
 
 # ---- preflight ----
 compact compile --version | grep -q "^$COMPILER_PIN" || { echo "default compiler is not $COMPILER_PIN" >&2; exit 1; }

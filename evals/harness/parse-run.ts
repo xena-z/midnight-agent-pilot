@@ -74,7 +74,10 @@ function checkInit(setup: string, file: string): string[] {
   if (init.model !== model) problems.push(`model ${init.model} != ${model}`);
   if (init.apiKeySource && init.apiKeySource !== 'none') problems.push(`apiKeySource=${init.apiKeySource} (expected subscription login)`);
   const servers: { name: string; status: string }[] = init.mcp_servers ?? [];
-  const plugins: { name: string }[] = init.plugins ?? [];
+  // Plugins built into Claude Code (source "<name>@builtin") load in every setup once logged in; they're baseline.
+  const plugins: { name: string; source?: string; path?: string }[] = (init.plugins ?? []).filter(
+    (p: any) => p.path !== 'builtin' && !String(p.source ?? '').endsWith('@builtin'),
+  );
   const mcpTools = (init.tools ?? []).filter((t: string) => t.startsWith('mcp__'));
   if (setup === 'A') {
     if (servers.length) problems.push(`A must load no MCP servers, got ${servers.map((s) => s.name)}`);

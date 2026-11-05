@@ -230,6 +230,7 @@ date,setup,task,run,model,compact_version,harness_commit,compiled_first,compiled
 | Midnight Expert source and install method | GitHub main @ `212d7c2c` (2026-10-28). Repo build: project-scope GitHub marketplace. Eval runs: `--plugin-dir` from a pinned local clone |
 | Midnight Expert plugins and versions (setup C) | compact-cli-dev 0.6.0, compact-core 0.12.0, compact-examples 0.5.0, core-concepts 0.3.2, midnight-cq 0.4.0, midnight-dapp-dev 0.6.0, midnight-expert 0.8.1, midnight-fact-check 0.5.0, midnight-indexer 0.3.0, midnight-node 0.3.0, midnight-plugin-utils 0.1.1, midnight-status-codes 0.11.0, midnight-tooling 0.4.0, midnight-verify 0.14.1, midnight-wallet 0.6.0, proof-server 0.2.0 |
 | MCP servers loaded per setup (from the init event) | A: none. B, R, C: `midnight` (Kapa) only. C adds 88 plugin skills and 22 agents, no MCP servers |
+| Baseline loaded in every setup (not Midnight-specific) | Claude Code built-in plugins (`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-privacy`, `cc-plugin-plugin-authoring`, all `@builtin`), Claude Code's bundled skills, and account-synced `anthropic-skills:*` (docs, docx, pdf, pptx, xlsx, …). Identical across setups; the full list is in each run's init event |
 | Kapa MCP URL and auth | https://midnight.mcp.kapa.ai, sign-in required |
 | Docker (only if devnet or proof server is needed) | 28.1.1 (installed; not yet needed) |
 | Dates of runs | |
