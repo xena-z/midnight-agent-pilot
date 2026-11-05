@@ -1,0 +1,18 @@
+// Reference solution for eval task 01-counter.
+// Adapted from midnightntwrk/example-counter (Apache-2.0), via Midnight Expert compact-examples 0.5.0.
+
+pragma language_version >= 0.22;
+
+import CompactStandardLibrary;
+
+// Public state: anyone can read it on-chain.
+export ledger round: Counter;
+
+export circuit increment(): [] {
+  round.increment(1);
+}
+
+// Returns public ledger state, so no disclose() is needed (nothing here comes from a witness).
+export circuit current(): Uint<64> {
+  return round.read();
+}

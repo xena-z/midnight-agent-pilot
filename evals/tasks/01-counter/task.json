@@ -1,0 +1,10 @@
+{
+  "id": "01-counter",
+  "title": "Counter",
+  "contract_path": "contract/counter.compact",
+  "interface": {
+    "circuits": ["increment", "current"],
+    "ledger": ["round"]
+  },
+  "frozen": false
+}
