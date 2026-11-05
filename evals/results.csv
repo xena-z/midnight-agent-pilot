@@ -1,1 +1,5 @@
 date,setup,task,run,model,compact_version,harness_commit,compiled_first,compiled_final,tests_pass_first,tests_pass_final,verified_before_claiming_done,interventions,hallucinated_apis,privacy_errors,agent_turns,minutes,cost_usd,web_lookups,mcp_calls,skill_calls,hook_outputs,failure_tags,notes
+2026-11-05,A,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,3,0.2,0.06,0,0,0,0,,
+2026-11-05,B,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.3,0.06,0,0,0,0,,
+2026-11-05,R,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.3,0.06,0,0,0,0,,
+2026-11-05,C,01-counter,1,claude-sonnet-5-5,0.36.0,99101f2,true,true,true,true,true,0,,,4,0.4,0.12,0,0,0,2,,

@@ -1,0 +1,13 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+export ledger round: Counter;
+
+export circuit increment(): [] {
+  round.increment(1);
+}
+
+export circuit current(): Uint<64> {
+  return round;
+}
