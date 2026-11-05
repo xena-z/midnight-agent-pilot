@@ -1,0 +1,71 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+//
+// Leaf (public, in `consents`):
+//   persistentCommit([domain, studyId, secret], randomness)
+//   -> hides studyId and secret; unlinkable to any later proof.
+// Revocation tag (public, in `revoked` once revoked):
+//   persistentHash([domain, secret, studyId])
+//   -> keyed by the participant's secret, so only they can compute it, and
+//      it has no public link to any leaf (the leaf is blinded by randomness).
+//
+// Known trade-off: the ledger can only check "not revoked" by looking up a
+// fixed value, so that tag is visible when `prove` runs. Proofs by the same
+// participant for the same study are therefore linkable to each other, but
+// never to a specific registration/leaf.
+
+ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+ledger revoked: Set<Bytes<32>>;
+ledger answered: Map<Bytes<32>, Bytes<32>>;
+ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+circuit leafFor(studyId: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:leaf:v1"), studyId, consentSecret()],
+    consentRandomness());
+}
+
+circuit revocationTag(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:revoke:v1"), consentSecret(), studyId]);
+}
+
+// Asserts the caller holds a registration for studyId in the tree.
+// The path must be for the caller's own leaf: merkleTreePathRoot hashes the
+// path's own `leaf`, so without this binding a prover could replay anyone's
+// public path.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const leaf = leafFor(studyId);
+  const path = consentPath(leaf);
+  assert(path.leaf == leaf, "path does not match registration");
+  // The recomputed root is a historic public tree root, so it identifies no
+  // particular leaf; the leaf and path stay private.
+  assert(consents.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+         "not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  // persistentCommit output is blinded by the secret randomness; the
+  // disclose() acknowledges that the commitment itself becomes public.
+  consents.insert(disclose(leafFor(studyId)));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assert(!answered.member(disclose(challenge)), "challenge already answered");
+  assertRegistered(studyId);
+  assert(!revoked.member(disclose(revocationTag(studyId))), "consent revoked");
+  answered.insert(disclose(challenge), disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  assertRegistered(studyId);
+  revoked.insert(disclose(revocationTag(studyId)));
+}

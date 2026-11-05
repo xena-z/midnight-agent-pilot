@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-05",
+  "setup": "A",
+  "task": "06-consent",
+  "run": 1,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "76cb9e7",
+  "interventions": 0,
+  "minutes": 1.1,
+  "plugin_sha": "",
+  "session_id": "d45d5291-2d87-4936-aca9-7a332fbf855f",
+  "notes": []
+}

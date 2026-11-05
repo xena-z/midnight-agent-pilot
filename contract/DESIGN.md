@@ -51,4 +51,6 @@ export circuit revoke(studyId: Bytes<32>): [];
 - **Anonymity set size**: with few registrations, any proof is easy to attribute. Timing (register, then prove soon after) also leaks.
 - **Challenge forwarding**: see decision 2.
 - **Transaction metadata**: whatever links a participant's transactions at the network or fee level is outside the contract. Open question to check in Midnight's docs.
+- **Open registration** (from the compact-core review, High): anyone can register any study ID, so a proof shows "someone holds a registration for this study", not that they were enrolled. A real system would gate `register` on a study-authority credential checked in-circuit. Out of scope for this demo.
+- **Tree capacity** (from the compact-core review, High): depth 10 holds 1,024 registrations, and unauthenticated registration can fill it. A real system needs a larger depth, epochs, or gated registration.
 - **Low-entropy secrets** can be brute-forced; the witness must return 32 random bytes.

@@ -1,0 +1,34 @@
+{
+  "task": "06-consent",
+  "src": "~/midnight-eval-sandboxes/C/06-consent-r1",
+  "compiler_version": "0.36.0",
+  "found": true,
+  "compact_files_found": [
+    "contract/consent.compact"
+  ],
+  "compiled": true,
+  "compile_seconds": 3.5,
+  "compile_output": "Compiling 3 circuits:",
+  "interface_ok": false,
+  "interface_missing": [
+    "ledger:consents",
+    "ledger:revoked",
+    "ledger:answered",
+    "ledger:registrations"
+  ],
+  "tests_ran": true,
+  "tests_total": 10,
+  "tests_passed": 1,
+  "tests_pass": false,
+  "test_failures": [
+    "register counts the registration without revealing the study: AssertionError: expected undefined to be 1n // Object.is equality",
+    "register -> prove succeeds and records the challenge for that study: TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')",
+    "an unregistered participant cannot prove: TypeError: Cannot read properties of undefined (reading 'member')",
+    "a participant cannot pass someone else’s Merkle path as their own: TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')",
+    "a challenge can be answered only once (replay protection): TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')",
+    "revoke -> prove fails: TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')",
+    "a non-holder cannot revoke someone else’s consent: TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')",
+    "revoking one study leaves the participant’s other studies active: TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')",
+    "the public ledger never holds a secret or randomness: TypeError: Cannot read properties of undefined (reading 'findPathForLeaf')"
+  ]
+}

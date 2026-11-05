@@ -1,0 +1,96 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+//
+// Registration  : the participant inserts a hiding commitment
+//                   C = persistentCommit([studyId, secret], randomness)
+//                 into a Merkle tree. The study ID, secret and randomness stay
+//                 private; C reveals nothing without the randomness.
+// Proof         : the participant proves in zero knowledge that some leaf of
+//                 the tree opens to (studyId, their secret), and that their
+//                 revocation tag for that study is not in `revoked`.
+//                 The Merkle path and leaf are never disclosed.
+// Revocation    : the participant proves they know an opening of a registered
+//                 leaf and publishes the revocation tag
+//                   N = persistentHash([domain, studyId, secret]).
+//                 Only the holder of `secret` can compute N, so only the
+//                 registrant can revoke.
+//
+// Known privacy trade-offs of this design (inherent to a public Set of
+// revocation tags):
+//  - `prove` must query `revoked` with N, so N is visible to the network. N is
+//    a stable pseudonym per (secret, studyId): proofs for the same study by the
+//    same participant are linkable to each other (and to a later revocation),
+//    but N does not identify the leaf/registration and cannot be computed
+//    without `secret`.
+//  - `prove` records `answered[challenge] = studyId` as required, so the
+//    study ID is public at proof time (not at registration).
+//  - If a participant registers the same study twice with the same secret,
+//    both registrations share one tag, so revoking revokes both.
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+// Hiding commitment to (studyId, secret) under the participant's randomness.
+circuit commitmentFor(studyId: Bytes<32>): Bytes<32> {
+  const sk = consentSecret();
+  const rnd = consentRandomness();
+  return persistentCommit<Vector<2, Bytes<32>>>([studyId, sk], rnd);
+}
+
+// Revocation tag, derivable only with the participant's secret.
+circuit revocationTag(studyId: Bytes<32>): Bytes<32> {
+  const sk = consentSecret();
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:revoke:v1"), studyId, sk]
+  );
+}
+
+// Asserts the caller's registration for studyId is in the tree.
+// The path's leaf is bound to the recomputed commitment, so a witness cannot
+// substitute a path for somebody else's leaf.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const commitment = commitmentFor(studyId);
+  const path = consentPath(commitment);
+  assert(path.leaf == commitment, "Merkle path is for a different leaf");
+  assert(
+    consents.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+    "Consent is not registered"
+  );
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  // Commitment is a hiding hash output; safe to publish. studyId is NOT disclosed.
+  const commitment = commitmentFor(studyId);
+  consents.insert(disclose(commitment));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+
+  const tag = disclose(revocationTag(studyId));
+  assert(!revoked.member(tag), "Consent has been revoked");
+
+  const c = disclose(challenge);
+  assert(!answered.member(c), "Challenge already answered");
+  answered.insert(c, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Only someone who knows the opening (secret + randomness) of a registered
+  // leaf for this study can get past this check.
+  assertRegistered(studyId);
+
+  const tag = disclose(revocationTag(studyId));
+  assert(!revoked.member(tag), "Consent already revoked");
+  revoked.insert(tag);
+}

@@ -1,0 +1,70 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+//
+// A registration is a Merkle-tree leaf:
+//   leaf = H("consent:leaf:", studyId, secret, randomness)
+// The randomness hides the study ID and the secret, so the leaf reveals
+// nothing about either. Proving membership happens inside the ZK circuit,
+// so a proof does not show which leaf was used.
+//
+// Revocation uses a nullifier N = H("consent:null:", studyId, secret).
+// It cannot be computed without the secret, and it does not involve the
+// randomness, so it cannot be matched to a leaf from public data.
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+circuit leafOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>(
+    [pad(32, "consent:leaf:"), studyId, consentSecret(), consentRandomness()]
+  );
+}
+
+circuit nullifierOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:null:"), studyId, consentSecret()]
+  );
+}
+
+// Checks (in zero knowledge) that the caller's leaf for studyId is in the tree.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const leaf = leafOf(studyId);
+  const path = consentPath(leaf);
+  // The witness is untrusted: the path must be for exactly our leaf.
+  assert(path.leaf == leaf, "Merkle path is not for this consent");
+  const root = merkleTreePathRoot<10, Bytes<32>>(path);
+  assert(consents.checkRoot(disclose(root)), "Consent is not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  // Only the hiding commitment becomes public, never studyId.
+  consents.insert(disclose(leafOf(studyId)));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+
+  // Not revoked. NOTE: a ledger membership query makes the queried value
+  // public, so the nullifier (not the leaf) is visible here.
+  assert(!revoked.member(disclose(nullifierOf(studyId))), "Consent has been revoked");
+
+  const c = disclose(challenge);
+  assert(!answered.member(c), "Challenge already answered");
+  answered.insert(c, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Requires the secret and randomness of an existing registration.
+  assertRegistered(studyId);
+  revoked.insert(disclose(nullifierOf(studyId)));
+}
