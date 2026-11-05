@@ -1,0 +1,65 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+// Public ledger state
+export ledger totalSupply: Uint<64>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+export sealed ledger admin: Bytes<32>;
+
+witness secretKey(): Bytes<32>;
+
+// Account address derived from a secret key.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+// The deployer becomes the admin.
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+circuit callerAccount(): Bytes<32> {
+  return disclose(publicKey(secretKey()));
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  const a = disclose(account);
+  if (balances.member(a)) {
+    return balances.lookup(a);
+  }
+  return 0;
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(callerAccount() == admin, "Only the admin can mint");
+  const t = disclose(to);
+  const amt = disclose(amount);
+  // Uint<64> arithmetic fails on overflow, so totalSupply cannot wrap.
+  const newSupply = totalSupply + amt;
+  const newBalance = balanceOf(t) + amt;
+  totalSupply = newSupply as Uint<64>;
+  balances.insert(t, newBalance as Uint<64>);
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = callerAccount();
+  const t = disclose(to);
+  const amt = disclose(amount);
+  const fromBalance = balanceOf(sender);
+  assert(fromBalance >= amt, "Insufficient balance");
+  balances.insert(sender, (fromBalance - amt) as Uint<64>);
+  // Read the receiver after the debit so a self-transfer is a no-op.
+  const toBalance = balanceOf(t);
+  balances.insert(t, (toBalance + amt) as Uint<64>);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = callerAccount();
+  const amt = disclose(amount);
+  const fromBalance = balanceOf(sender);
+  assert(fromBalance >= amt, "Insufficient balance");
+  balances.insert(sender, (fromBalance - amt) as Uint<64>);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+}

@@ -1,0 +1,65 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Public ledger state
+export ledger totalSupply: Uint<64>;
+export ledger admin: Bytes<32>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+
+// The caller's secret key (supplied privately by the user's DApp)
+witness secretKey(): Bytes<32>;
+
+// Account address derived from a secret key
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+// The deployer becomes the admin
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+circuit callerAccount(): Bytes<32> {
+  return publicKey(secretKey());
+}
+
+circuit getBalance(account: Bytes<32>): Uint<64> {
+  return balances.member(account) ? balances.lookup(account) : 0;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  return getBalance(disclose(account));
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(callerAccount() == admin, "Only the admin can mint");
+  const t = disclose(to);
+  const a = disclose(amount);
+  // Uint<64> arithmetic fails on overflow, so totalSupply cannot wrap
+  const newSupply = (totalSupply + a) as Uint<64>;
+  const newBal = (getBalance(t) + a) as Uint<64>;
+  totalSupply = newSupply;
+  balances.insert(t, newBal);
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = disclose(callerAccount());
+  const t = disclose(to);
+  const a = disclose(amount);
+  const senderBal = getBalance(sender);
+  assert(senderBal >= a, "Insufficient balance");
+  balances.insert(sender, (senderBal - a) as Uint<64>);
+  // Read the recipient balance after debiting, so self-transfers are correct
+  balances.insert(t, (getBalance(t) + a) as Uint<64>);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = disclose(callerAccount());
+  const a = disclose(amount);
+  const senderBal = getBalance(sender);
+  assert(senderBal >= a, "Insufficient balance");
+  balances.insert(sender, (senderBal - a) as Uint<64>);
+  totalSupply = (totalSupply - a) as Uint<64>;
+}

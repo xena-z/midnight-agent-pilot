@@ -1,0 +1,16 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+witness secretValue(): Uint<64>;
+witness secretSalt(): Bytes<32>;
+
+export ledger commitment: Bytes<32>;
+
+export circuit commit(): [] {
+  commitment = persistentCommit<Uint<64>>(secretValue(), secretSalt());
+}
+
+export circuit matches(value: Uint<64>, salt: Bytes<32>): Boolean {
+  return commitment == persistentCommit<Uint<64>>(value, salt);
+}

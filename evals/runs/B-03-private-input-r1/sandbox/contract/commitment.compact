@@ -1,0 +1,27 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+// Public ledger: only the 32-byte commitment is ever stored.
+export ledger commitment: Bytes<32>;
+
+// Private inputs, supplied by the user's local environment.
+witness secretValue(): Uint<64>;
+witness secretSalt(): Bytes<32>;
+
+// Hiding commitment to (value, salt).
+circuit computeCommitment(value: Uint<64>, salt: Bytes<32>): Bytes<32> {
+  return persistentCommit<Uint<64>>(value, salt);
+}
+
+// Store the commitment to the private value; the value and salt stay private.
+export circuit commit(): [] {
+  const c = computeCommitment(secretValue(), secretSalt());
+  // The commitment is hiding, so it is safe to publish.
+  commitment = disclose(c);
+}
+
+// Check whether (value, salt) open the stored commitment.
+export circuit matches(value: Uint<64>, salt: Bytes<32>): Boolean {
+  return disclose(computeCommitment(value, salt) == commitment);
+}

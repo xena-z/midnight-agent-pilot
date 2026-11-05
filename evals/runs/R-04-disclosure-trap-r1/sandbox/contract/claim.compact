@@ -1,0 +1,25 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+witness secretKey(): Bytes<32>;
+
+export ledger claims: Counter;
+// Nullifiers use a different domain separator than public keys, so they
+// cannot be linked back to a public key.
+ledger nullifiers: Set<Bytes<32>>;
+
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "claim:pk:"), sk]);
+}
+
+circuit nullifier(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "claim:nullifier:"), sk]);
+}
+
+export circuit claim(): [] {
+  const nf = disclose(nullifier(secretKey()));
+  assert(!nullifiers.member(nf), "Already claimed");
+  nullifiers.insert(nf);
+  claims.increment(1);
+}
