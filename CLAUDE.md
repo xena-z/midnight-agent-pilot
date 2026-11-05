@@ -159,12 +159,13 @@ Every scored run goes through `evals/harness/run.sh <setup> <task> <run>`, start
    - `CLAUDE_CONFIG_DIR=~/.claude-eval`: a separate, clean Claude Code config with no personal plugins, skills, agents, CLAUDE.md, memory or claude.ai connectors. Log in once and keep it identical all week.
    - `claude -p "<prompt.md>" --model claude-sonnet-5-5 --output-format stream-json --verbose --max-turns 50 --mcp-config setups/<none|kapa>.mcp.json --strict-mcp-config --permission-mode bypassPermissions --disallowedTools "Bash(compact update *)" "Bash(compact self *)" "Bash(compact clean *)"`, plus 16 `--plugin-dir` flags for C. The deny list stops an agent from changing the shared toolchain mid-week.
    - A 20-minute wall-clock cap via `gtimeout` (coreutils).
+   - A per-run access policy (`setups/eval-settings.json`, saved as `runs/<id>/settings.json`). The agent can read its own sandbox, the toolchain (`~/.compact`, `~/.local/bin`, `~/.nvm`), caches (`~/.npm`, `~/.cache/midnight`), `/tmp`, and the pinned plugin clone, and nothing else in `$HOME`. The OS enforces this for Bash through Claude Code's sandbox; permission rules enforce it for Claude's file tools. This was added after an unrestricted agent searched the whole disk (FRICTION_LOG F-08).
 3. **Checks the init event.** The first stream-json event lists the loaded model, tools, MCP servers and plugins. The run is void if anything falls outside the setup's allowlist (e.g., any `mcp__` tool in A).
 4. Runs Phase 2 if needed (see below) via `--resume <session-id>`.
 5. Runs `score.sh` and appends one row to `results.csv`, then saves the transcript and score output to `evals/runs/<setup>-<task>-r<n>/`.
 
 **Day 1 checks:**
-- Kapa sign-in works under `~/.claude-eval` in headless mode. *Pending: the init check currently reports `needs-auth`.*
+- ~~Kapa sign-in works under `~/.claude-eval` in headless mode.~~ Resolved 2026-11-05: after one interactive `/mcp` sign-in, headless runs report `midnight` as `connected`, with tools `search_midnight_knowledge_sources` and `give_feedback`.
 - ~~`--strict-mcp-config` might block MCP servers that Midnight Expert plugins provide.~~ Resolved: the plugins ship no MCP servers.
 
 If Kapa sign-in can't work headless, run B, R and C interactively with the same prompts and caps, and log it as friction.

@@ -57,6 +57,11 @@ find "$SANDBOX" -name .gitkeep -delete
 [ "$SETUP" = "R" ] && cp "$H/setups/R.CLAUDE.md" "$SANDBOX/CLAUDE.md"
 PROMPT="$(cat "$TASK_DIR/prompt.md")"
 
+# Per-run access policy (same for every setup): the agent can read and write its own sandbox, the toolchain,
+# caches, /tmp and the pinned plugin clone, and nothing else in $HOME. Enforced by the OS for Bash
+# (Claude Code's sandbox) and by permission rules for Claude's own file tools.
+sed "s#__SANDBOX__#$SANDBOX#g" "$H/setups/eval-settings.json" > "$OUT/settings.json"
+
 PLUGIN_FLAGS=(); PLUGIN_SHA_USED=""
 if [ "$SETUP" = "C" ]; then
   for d in "$PLUGIN_ROOT"/plugins/*/; do PLUGIN_FLAGS+=(--plugin-dir "${d%/}"); done
@@ -70,7 +75,7 @@ agent() { # agent <timeout-seconds> <out.jsonl> <claude args...>
       gtimeout "$t" claude "$@" \
         --model "$MODEL" --output-format stream-json --verbose --max-turns "$MAX_TURNS" \
         --mcp-config "$MCP" --strict-mcp-config \
-        --permission-mode bypassPermissions \
+        --permission-mode bypassPermissions --settings "$OUT/settings.json" \
         --disallowedTools "Bash(compact update *)" "Bash(compact self *)" "Bash(compact clean *)" \
         ${PLUGIN_FLAGS[@]+"${PLUGIN_FLAGS[@]}"} \
       < /dev/null > "$f" 2> "${f%.jsonl}.stderr" ) || echo $?

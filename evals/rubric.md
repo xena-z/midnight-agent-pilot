@@ -23,6 +23,7 @@ One row in `results.csv` per run. `harness/run.sh` fills the automated columns. 
 | `web_lookups` | `WebSearch` + `WebFetch` calls, all phases. |
 | `mcp_calls` | Calls to any `mcp__` tool (only Kapa exists in B, R, C). |
 | `skill_calls` | `Skill` tool calls (built-in or plugin skills). |
+| `hook_outputs` | Hook events (e.g., plugin `SessionStart` hooks) that returned output. Plugins can steer the agent this way without any tool call, so read it alongside `skill_calls`. |
 
 ## Manual
 

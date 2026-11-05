@@ -3,8 +3,13 @@
   "title": "Counter",
   "contract_path": "contract/counter.compact",
   "interface": {
-    "circuits": ["increment", "current"],
-    "ledger": ["round"]
+    "circuits": [
+      "increment",
+      "current"
+    ],
+    "ledger": [
+      "round"
+    ]
   },
-  "frozen": false
+  "frozen": true
 }

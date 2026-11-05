@@ -14,7 +14,7 @@ export const CSV_COLUMNS = [
   'date', 'setup', 'task', 'run', 'model', 'compact_version', 'harness_commit',
   'compiled_first', 'compiled_final', 'tests_pass_first', 'tests_pass_final',
   'verified_before_claiming_done', 'interventions', 'hallucinated_apis', 'privacy_errors',
-  'agent_turns', 'minutes', 'cost_usd', 'web_lookups', 'mcp_calls', 'skill_calls',
+  'agent_turns', 'minutes', 'cost_usd', 'web_lookups', 'mcp_calls', 'skill_calls', 'hook_outputs',
   'failure_tags', 'notes',
 ] as const;
 
@@ -143,6 +143,8 @@ function row(dir: string): string {
     web_lookups: tools.filter((t) => t.name === 'WebSearch' || t.name === 'WebFetch').length,
     mcp_calls: tools.filter((t) => t.name.startsWith('mcp__')).length,
     skill_calls: tools.filter((t) => t.name === 'Skill').length,
+    // Plugin hooks (e.g. SessionStart) can inject guidance without any tool call; count the ones that returned output.
+    hook_outputs: all.filter((e) => e.type === 'system' && e.subtype === 'hook_response' && String(e.output ?? '').trim()).length,
     failure_tags: '', // manual review
     notes: notes.join('; '),
   };
