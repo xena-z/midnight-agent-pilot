@@ -1,0 +1,20 @@
+// Reference solution for eval task 03-private-input.
+pragma language_version >= 0.22;
+
+import CompactStandardLibrary;
+
+// Only the commitment is public. persistentCommit hides the value behind a random salt,
+// and clears witness taint, so storing it needs no disclose().
+export ledger commitment: Bytes<32>;
+
+witness secretValue(): Uint<64>;
+witness secretSalt(): Bytes<32>;
+
+export circuit commit(): [] {
+  commitment = persistentCommit<Uint<64>>(secretValue(), secretSalt());
+}
+
+// Reveals only whether (value, salt) opens the stored commitment.
+export circuit matches(value: Uint<64>, salt: Bytes<32>): Boolean {
+  return disclose(persistentCommit<Uint<64>>(value, salt) == commitment);
+}

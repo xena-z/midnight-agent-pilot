@@ -1,0 +1,15 @@
+{
+  "id": "04-disclosure-trap",
+  "title": "Disclosure trap (one-time claim)",
+  "contract_path": "contract/claim.compact",
+  "interface": {
+    "circuits": [
+      "claim",
+      "publicKey"
+    ],
+    "ledger": [
+      "claims"
+    ]
+  },
+  "frozen": true
+}

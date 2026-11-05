@@ -1,0 +1,15 @@
+{
+  "id": "03-private-input",
+  "title": "Private input",
+  "contract_path": "contract/commitment.compact",
+  "interface": {
+    "circuits": [
+      "commit",
+      "matches"
+    ],
+    "ledger": [
+      "commitment"
+    ]
+  },
+  "frozen": true
+}

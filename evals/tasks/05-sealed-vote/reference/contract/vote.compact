@@ -1,0 +1,57 @@
+// Reference solution for eval task 05-sealed-vote.
+pragma language_version >= 0.22;
+
+import CompactStandardLibrary;
+
+export enum Phase { commit, reveal }
+
+export ledger phase: Phase;
+export ledger admin: Bytes<32>;
+// Voter public key -> hiding commitment to their vote. Who voted is public; how is hidden until reveal.
+export ledger commitments: Map<Bytes<32>, Bytes<32>>;
+export ledger revealed: Set<Bytes<32>>;
+export ledger yes: Counter;
+export ledger no: Counter;
+
+witness secretKey(): Bytes<32>;
+witness myVote(): Boolean;
+witness voteSalt(): Bytes<32>;
+
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "vote:pk:"), sk]);
+}
+
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  phase = Phase.commit;
+}
+
+export circuit commitVote(): [] {
+  assert(phase == Phase.commit, "Not in commit phase");
+  const voter = disclose(publicKey(secretKey()));
+  assert(!commitments.member(voter), "Already committed");
+  // persistentCommit clears witness taint: the vote stays hidden behind the salt.
+  commitments.insert(voter, persistentCommit<Boolean>(myVote(), voteSalt()));
+}
+
+export circuit closeCommits(): [] {
+  assert(disclose(publicKey(secretKey()) == admin), "Not the admin");
+  assert(phase == Phase.commit, "Not in commit phase");
+  phase = Phase.reveal;
+}
+
+export circuit revealVote(): [] {
+  assert(phase == Phase.reveal, "Not in reveal phase");
+  const voter = disclose(publicKey(secretKey()));
+  assert(commitments.member(voter), "No commitment for this voter");
+  assert(!revealed.member(voter), "Already revealed");
+  const vote = myVote();
+  assert(persistentCommit<Boolean>(vote, voteSalt()) == commitments.lookup(voter), "Vote does not match commitment");
+  revealed.insert(voter);
+  // Revealing the vote is the point of this phase.
+  if (disclose(vote)) {
+    yes.increment(1);
+  } else {
+    no.increment(1);
+  }
+}

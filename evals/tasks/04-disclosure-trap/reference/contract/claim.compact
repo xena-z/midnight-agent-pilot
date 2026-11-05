@@ -1,0 +1,27 @@
+// Reference solution for eval task 04-disclosure-trap.
+pragma language_version >= 0.22;
+
+import CompactStandardLibrary;
+
+export ledger claims: Counter;
+// Nullifiers of users who claimed. A nullifier uses a different hash domain than the public key,
+// so nobody can check whether a given public key has claimed.
+export ledger claimed: Set<Bytes<32>>;
+
+witness secretKey(): Bytes<32>;
+
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "claim:pk:"), sk]);
+}
+
+circuit nullifier(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "claim:nullifier:"), sk]);
+}
+
+export circuit claim(): [] {
+  // Disclosing the nullifier is intended: it must be public to block a second claim.
+  const n = disclose(nullifier(secretKey()));
+  assert(!claimed.member(n), "Already claimed");
+  claimed.insert(n);
+  claims.increment(1);
+}

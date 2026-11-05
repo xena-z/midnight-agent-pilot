@@ -1,0 +1,18 @@
+{
+  "id": "02-token",
+  "title": "Token",
+  "contract_path": "contract/token.compact",
+  "interface": {
+    "circuits": [
+      "mint",
+      "transfer",
+      "burn",
+      "balanceOf",
+      "publicKey"
+    ],
+    "ledger": [
+      "totalSupply"
+    ]
+  },
+  "frozen": true
+}

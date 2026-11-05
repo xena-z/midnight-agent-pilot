@@ -1,0 +1,18 @@
+{
+  "id": "05-sealed-vote",
+  "title": "Sealed-bid vote (commit/reveal)",
+  "contract_path": "contract/vote.compact",
+  "interface": {
+    "circuits": [
+      "commitVote",
+      "closeCommits",
+      "revealVote",
+      "publicKey"
+    ],
+    "ledger": [
+      "yes",
+      "no"
+    ]
+  },
+  "frozen": true
+}
