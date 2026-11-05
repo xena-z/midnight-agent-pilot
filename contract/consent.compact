@@ -1,0 +1,86 @@
+// Consent attestation — demo only, no real data.
+// Design and threat model: contract/DESIGN.md.
+// Patterns: Midnight Expert compact-core examples NullifierDoubleSpend.compact and PrivateVoting.compact.
+
+pragma language_version >= 0.22;
+
+import CompactStandardLibrary;
+
+// ---- Public ledger ----
+
+// Consent commitments. Each leaf hides (secret, studyId) behind randomness. Membership proofs don't
+// reveal which leaf is being proven. "Historic" keeps proofs valid after later registrations.
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+
+// Per-study pseudonyms of revoked consents. Public so prove() can check them (decision 1).
+export ledger revoked: Set<Bytes<32>>;
+
+// Clinic challenge -> study ID, written by a successful prove(). The clinic looks up its own
+// one-time challenge here (decision 2).
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+
+// Total registrations only; no per-study counts (decision 3).
+export ledger registrations: Counter;
+
+// ---- Private inputs (supplied by the participant's device) ----
+
+witness consentSecret(): Bytes<32>;       // long-term secret, 32 random bytes
+witness consentRandomness(): Bytes<32>;   // blinding for commitments, 32 random bytes
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+// ---- Derivations ----
+
+// persistentCommit hides its input behind the randomness and clears witness taint,
+// so the result can be stored without disclose(). The domain string separates it from pseudonyms.
+circuit consentCommitment(secret: Bytes<32>, studyId: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:commitment:"), secret, studyId],
+    consentRandomness()
+  );
+}
+
+// Deterministic per (participant, study): the same person gets the same pseudonym for one study,
+// and unlinkable pseudonyms across studies. Different domain from the commitment, so the two can't be matched.
+circuit pseudonym(secret: Bytes<32>, studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "consent:pseudonym:"), secret, studyId]);
+}
+
+// Proves the caller holds a registered consent for studyId without revealing which leaf is theirs.
+circuit assertRegistered(secret: Bytes<32>, studyId: Bytes<32>): [] {
+  const commitment = consentCommitment(secret, studyId);
+  const path = consentPath(commitment);
+  // The path comes from the caller's own device. Without this check, anyone could submit
+  // another participant's (public) path and pass the root check.
+  assert(path.leaf == commitment, "Consent: path is not for this commitment");
+  assert(consents.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))), "Consent: not registered");
+}
+
+// ---- Circuits ----
+
+export circuit register(studyId: Bytes<32>): [] {
+  // studyId is a circuit argument, so the compiler treats it as private. It goes only into the
+  // commitment, never to the ledger in the clear.
+  consents.insert(consentCommitment(consentSecret(), studyId));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  const secret = consentSecret();
+  assertRegistered(secret, studyId);
+  // Publishing the pseudonym is intended: it is how revocation is enforced (decision 1).
+  const p = disclose(pseudonym(secret, studyId));
+  assert(!revoked.member(p), "Consent: revoked");
+  // One-time challenge from the clinic; answering it records which study it was for (decision 2).
+  const ch = disclose(challenge);
+  assert(!answered.member(ch), "Consent: challenge already answered");
+  answered.insert(ch, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  const secret = consentSecret();
+  // Only the holder of the secret and randomness can produce both the membership proof and the pseudonym.
+  assertRegistered(secret, studyId);
+  const p = disclose(pseudonym(secret, studyId));
+  assert(!revoked.member(p), "Consent: already revoked");
+  revoked.insert(p);
+}

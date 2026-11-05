@@ -1,0 +1,19 @@
+{
+  "id": "06-consent",
+  "title": "Consent attestation (Part 1 spec)",
+  "contract_path": "contract/consent.compact",
+  "interface": {
+    "circuits": [
+      "register",
+      "prove",
+      "revoke"
+    ],
+    "ledger": [
+      "consents",
+      "revoked",
+      "answered",
+      "registrations"
+    ]
+  },
+  "frozen": false
+}
