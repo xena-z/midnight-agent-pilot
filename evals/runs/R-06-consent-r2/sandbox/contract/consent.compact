@@ -1,0 +1,68 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+// Hiding commitment to (studyId, secret) using the participant's randomness.
+circuit commitmentFor(studyId: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<2, Bytes<32>>>(
+    [studyId, consentSecret()],
+    consentRandomness()
+  );
+}
+
+// Revocation tag: deterministic per (studyId, secret), unlinkable to the leaf
+// and does not expose the secret.
+circuit revocationTag(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:revoke:v1"), studyId, consentSecret()]
+  );
+}
+
+// Asserts that the caller's registration for studyId is in the tree.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const cm = commitmentFor(studyId);
+  const path = consentPath(cm);
+  assert(
+    consents.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+    "Not registered"
+  );
+  // The path must be for our own commitment, not someone else's leaf.
+  assert(
+    path.leaf == cm,
+    "Path does not match commitment"
+  );
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  // Only the hiding commitment is disclosed; studyId, secret and randomness stay private.
+  consents.insert(disclose(commitmentFor(studyId)));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+
+  const tag = disclose(revocationTag(studyId));
+  assert(!revoked.member(tag), "Consent revoked");
+
+  const ch = disclose(challenge);
+  assert(!answered.member(ch), "Challenge already answered");
+  answered.insert(ch, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Only someone who knows the secret behind a registered commitment can do this.
+  assertRegistered(studyId);
+  revoked.insert(disclose(revocationTag(studyId)));
+}

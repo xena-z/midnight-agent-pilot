@@ -1,0 +1,34 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+// Public counter of successful claims.
+export ledger claims: Counter;
+
+// Set of claim nullifiers. A nullifier is derived from the secret key with a
+// different domain separator than the public key, so it cannot be linked to
+// the public key without knowing the secret key.
+ledger nullifiers: Set<Bytes<32>>;
+
+witness secretKey(): Bytes<32>;
+
+// Public key shown by the app (domain-separated hash of the secret key).
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>(
+    [pad(32, "claim:pk:"), sk]
+  );
+}
+
+// Claim-specific nullifier; unrelated to the public key for observers.
+circuit nullifier(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>(
+    [pad(32, "claim:nullifier:"), sk]
+  );
+}
+
+export circuit claim(): [] {
+  const nf = disclose(nullifier(secretKey()));
+  assert(!nullifiers.member(nf), "Already claimed");
+  nullifiers.insert(nf);
+  claims.increment(1);
+}

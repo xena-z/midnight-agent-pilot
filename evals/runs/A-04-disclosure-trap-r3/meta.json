@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-05",
+  "setup": "A",
+  "task": "04-disclosure-trap",
+  "run": 3,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "d2782f3",
+  "interventions": 0,
+  "minutes": 0.3,
+  "plugin_sha": "",
+  "session_id": "ef98523f-783b-4155-b8eb-c83ba201f52e",
+  "notes": []
+}

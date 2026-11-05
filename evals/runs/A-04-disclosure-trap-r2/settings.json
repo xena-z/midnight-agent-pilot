@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "blockReadsOutsideWorkingDirectories": true,
+    "additionalDirectories": [
+      "~/.compact"
+    ],
+    "deny": [
+      "Read(~/midnight-agent-pilot/**)",
+      "Read(~/.claude-eval/projects/**)",
+      "Read(~/.claude/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": [
+        "~/"
+      ],
+      "allowRead": [
+        "~/midnight-eval-sandboxes/A/04-disclosure-trap-r2",
+        "~/.compact",
+        "~/.local/bin",
+        "~/.nvm",
+        "~/.npm",
+        "~/.cache/midnight"
+      ],
+      "allowWrite": [
+        "~/midnight-eval-sandboxes/A/04-disclosure-trap-r2",
+        "~/.cache/midnight",
+        "~/.npm",
+        "/tmp",
+        "/private/tmp"
+      ]
+    }
+  }
+}

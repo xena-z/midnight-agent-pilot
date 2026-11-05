@@ -1,0 +1,73 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+//
+// A registration is a Merkle-tree leaf:
+//   commitment = H(domain, studyId, secret, randomness)
+// Only the commitment goes on the ledger, so the study ID, secret and
+// randomness stay private at registration.
+//
+// A revocation tag ("nullifier") is H(domain, studyId, secret). It does not
+// depend on the randomness, so revoking covers every registration the same
+// participant made for that study. It cannot be derived without the secret.
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+circuit commitmentOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>(
+    [pad(32, "consent:commit:v1"), studyId, consentSecret(), consentRandomness()]
+  );
+}
+
+circuit revocationTagOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:revoke:v1"), studyId, consentSecret()]
+  );
+}
+
+// Checks that the caller's registration for studyId is in the tree.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const commitment = commitmentOf(studyId);
+  const path = consentPath(commitment);
+  const root = merkleTreePathRoot<10, Bytes<32>>(path);
+  assert(consents.checkRoot(disclose(root)), "Consent not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  // The hash output hides studyId because the secret and randomness are private.
+  const commitment = commitmentOf(studyId);
+  consents.insert(disclose(commitment));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+
+  // Not revoked. Only the revocation tag is revealed, never the commitment or
+  // the Merkle path, so the proof does not point at a specific registration.
+  const tag = revocationTagOf(studyId);
+  assert(!revoked.member(disclose(tag)), "Consent revoked");
+
+  const c = disclose(challenge);
+  assert(!answered.member(c), "Challenge already answered");
+  answered.insert(c, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Only someone who knows the secret and randomness of a registered
+  // commitment can build this proof.
+  assertRegistered(studyId);
+
+  const tag = revocationTagOf(studyId);
+  assert(!revoked.member(disclose(tag)), "Already revoked");
+  revoked.insert(disclose(tag));
+}

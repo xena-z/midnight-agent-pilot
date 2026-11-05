@@ -1,0 +1,56 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+// Hiding commitment to (secret, randomness, studyId). The randomness hides the
+// study ID and the owner; the secret binds the leaf to its owner.
+circuit commitmentOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>(
+    [pad(32, "consent:leaf:v1"), consentSecret(), consentRandomness(), studyId]);
+}
+
+// Revocation tag, unlinkable to the leaf without the secret and randomness.
+circuit nullifierOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>(
+    [pad(32, "consent:null:v1"), consentSecret(), consentRandomness(), studyId]);
+}
+
+// Asserts the caller's registration for studyId is in the tree.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const commitment = commitmentOf(studyId);
+  const path = consentPath(commitment);
+  assert(path.leaf == commitment, "Merkle path is for a different leaf");
+  assert(consents.checkRoot(disclose(merkleTreePathRoot<10, Bytes<32>>(path))),
+         "Consent is not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  consents.insert(disclose(commitmentOf(studyId)));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+  // The nullifier must be checked against the public set; it is not linkable
+  // to any leaf in `consents`.
+  assert(!revoked.member(disclose(nullifierOf(studyId))), "Consent revoked");
+  assert(!answered.member(disclose(challenge)), "Challenge already answered");
+  answered.insert(disclose(challenge), disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Only someone who knows the secret and randomness can build a valid path.
+  assertRegistered(studyId);
+  revoked.insert(disclose(nullifierOf(studyId)));
+}

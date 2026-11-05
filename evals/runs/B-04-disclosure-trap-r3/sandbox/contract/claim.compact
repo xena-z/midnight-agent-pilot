@@ -1,0 +1,28 @@
+pragma language_version >= 0.16;
+
+import CompactStandardLibrary;
+
+// Tracks which secret keys have claimed. Entries are NULLIFIERS, not public
+// keys: they are hashed under a different domain separator than publicKey(),
+// so nobody can map a known public key to an entry in this set.
+export ledger claimed: Set<Bytes<32>>;
+export ledger claims: Counter;
+
+witness secretKey(): Bytes<32>;
+
+// Public key shown by the app elsewhere.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "claim:pk:"), sk]);
+}
+
+// Claim nullifier: unlinkable to the public key (different domain, one-way hash).
+circuit nullifier(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "claim:nullifier:"), sk]);
+}
+
+export circuit claim(): [] {
+  const n = disclose(nullifier(secretKey()));
+  assert(!claimed.member(n), "Already claimed");
+  claimed.insert(n);
+  claims.increment(1);
+}

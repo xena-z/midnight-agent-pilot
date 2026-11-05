@@ -1,0 +1,77 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo only, no real data).
+//
+// - register: inserts a hiding commitment to (studyId, secret) into a Merkle tree.
+//   The study ID is hidden by the commitment randomness and never written publicly.
+// - prove: proves, in zero knowledge, that the caller's leaf is in the tree (without
+//   revealing which leaf) and that the caller's revocation nullifier is not revoked.
+//   The one-time challenge is recorded together with the study ID.
+// - revoke: the registrant proves membership and publishes a nullifier for (studyId, secret).
+//
+// Privacy note: the nullifier is checked against the public `revoked` set, so a
+// `prove` call necessarily exposes it. It is not linkable to the Merkle leaf
+// (it is a hash that needs the secret), but two proofs by the same participant
+// for the same study carry the same nullifier and are therefore linkable to each other.
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+// Hiding commitment (leaf). Randomness blinds both the study ID and the secret.
+circuit commitmentOf(studyId: Bytes<32>, secret: Bytes<32>, rand: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<2, Bytes<32>>>([studyId, secret], rand);
+}
+
+// Revocation nullifier. Needs the secret, so only the registrant can compute it,
+// and it is independent of the randomness so a revoked consent stays revoked.
+circuit nullifierOf(studyId: Bytes<32>, secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "consent:nullifier:v1"), studyId, secret]);
+}
+
+// Asserts the caller's own registration for `studyId` is in the tree.
+circuit assertRegistered(studyId: Bytes<32>, secret: Bytes<32>): [] {
+  const leaf = commitmentOf(studyId, secret, consentRandomness());
+  const path = consentPath(leaf);
+  // The witness is untrusted: bind the path to the leaf derived from our own secret.
+  assert(path.leaf == leaf, "Path does not match registration");
+  const root = merkleTreePathRoot<10, Bytes<32>>(path);
+  // The root is public tree state and does not identify the leaf.
+  assert(consents.checkRoot(disclose(root)), "Not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  const leaf = commitmentOf(studyId, consentSecret(), consentRandomness());
+  // Disclosing the hiding commitment is intended; studyId stays private.
+  consents.insert(disclose(leaf));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  const secret = consentSecret();
+  assertRegistered(studyId, secret);
+
+  const nullifier = nullifierOf(studyId, secret);
+  assert(!revoked.member(disclose(nullifier)), "Consent revoked");
+
+  const c = disclose(challenge);
+  assert(!answered.member(c), "Challenge already answered");
+  answered.insert(c, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  const secret = consentSecret();
+  // Only someone holding the secret and randomness of a real registration passes.
+  assertRegistered(studyId, secret);
+
+  const nullifier = disclose(nullifierOf(studyId, secret));
+  assert(!revoked.member(nullifier), "Already revoked");
+  revoked.insert(nullifier);
+}

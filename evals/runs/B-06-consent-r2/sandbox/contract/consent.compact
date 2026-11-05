@@ -1,0 +1,69 @@
+pragma language_version >= 0.18;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo, no real data).
+//
+// Registration leaf  = persistentCommit([secret, studyId], randomness)
+//   -> hides both the study ID and the owner; randomness never leaves the witness.
+// Revocation tag     = persistentHash([domain, secret, studyId])
+//   -> only derivable by the holder of `secret`; it is NOT derivable from the leaf,
+//      so the public tree and the revoked set cannot be joined without the secret.
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+circuit commitmentOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<2, Bytes<32>>>(
+    [consentSecret(), studyId],
+    consentRandomness()
+  );
+}
+
+circuit revocationTagOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:revoke:v1"), consentSecret(), studyId]
+  );
+}
+
+// Proves, in zero knowledge, that the caller's registration for `studyId`
+// is a leaf of the (historic) consent tree. Does not reveal the leaf.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const commitment = commitmentOf(studyId);
+  const path = consentPath(commitment);
+  assert(path.leaf == commitment, "Path does not match this registration");
+  const root = merkleTreePathRoot<10, Bytes<32>>(path);
+  assert(consents.checkRoot(disclose(root)), "Not a registered consent");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  // The commitment hides studyId and the secret; disclosing it is intended.
+  const commitment = commitmentOf(studyId);
+  consents.insert(disclose(commitment));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+
+  const tag = revocationTagOf(studyId);
+  assert(!revoked.member(disclose(tag)), "Consent has been revoked");
+
+  assert(!answered.member(disclose(challenge)), "Challenge already answered");
+  answered.insert(disclose(challenge), disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Requires the secret, randomness and Merkle path of the original registration.
+  assertRegistered(studyId);
+
+  const tag = revocationTagOf(studyId);
+  assert(!revoked.member(disclose(tag)), "Already revoked");
+  revoked.insert(disclose(tag));
+}

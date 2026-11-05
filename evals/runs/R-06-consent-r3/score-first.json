@@ -1,0 +1,21 @@
+{
+  "task": "06-consent",
+  "src": "~/midnight-eval-sandboxes/R/06-consent-r3",
+  "compiler_version": "0.36.0",
+  "found": true,
+  "compact_files_found": [
+    "contract/consent.compact"
+  ],
+  "compiled": true,
+  "compile_seconds": 3.3,
+  "compile_output": "Compiling 3 circuits:",
+  "interface_ok": true,
+  "interface_missing": [],
+  "tests_ran": true,
+  "tests_total": 10,
+  "tests_passed": 9,
+  "tests_pass": false,
+  "test_failures": [
+    "a participant cannot pass someone else’s Merkle path as their own: Error: promise resolved \"[]\" instead of rejecting"
+  ]
+}

@@ -1,0 +1,54 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+// Hiding commitment to (secret, randomness, studyId). Only this goes in the tree.
+circuit commitmentOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>(
+    [pad(32, "consent:commit:"), consentSecret(), consentRandomness(), studyId]);
+}
+
+// Deterministic per (secret, study); independent of randomness, so it is not
+// linkable to a specific commitment in the tree.
+circuit nullifierOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:nullifier:"), consentSecret(), studyId]);
+}
+
+// Proves (privately) that the caller's commitment for studyId is in the tree.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const cm = commitmentOf(studyId);
+  const path = consentPath(cm);
+  const root = merkleTreePathRoot<10, Bytes<32>>(path);
+  assert(consents.checkRoot(disclose(root)), "Consent not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  const cm = commitmentOf(studyId);
+  consents.insert(disclose(cm));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+  const nf = nullifierOf(studyId);
+  assert(!revoked.member(disclose(nf)), "Consent revoked");
+  const ch = disclose(challenge);
+  assert(!answered.member(ch), "Challenge already answered");
+  answered.insert(ch, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  // Only someone knowing the secret+randomness of a registered commitment can do this.
+  assertRegistered(studyId);
+  revoked.insert(disclose(nullifierOf(studyId)));
+}

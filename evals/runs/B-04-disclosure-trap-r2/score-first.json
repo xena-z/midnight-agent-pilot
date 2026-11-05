@@ -1,0 +1,19 @@
+{
+  "task": "04-disclosure-trap",
+  "src": "~/midnight-eval-sandboxes/B/04-disclosure-trap-r2",
+  "compiler_version": "0.36.0",
+  "found": true,
+  "compact_files_found": [
+    "contract/claim.compact"
+  ],
+  "compiled": true,
+  "compile_seconds": 0.8,
+  "compile_output": "Compiling 1 circuits:",
+  "interface_ok": true,
+  "interface_missing": [],
+  "tests_ran": true,
+  "tests_total": 5,
+  "tests_passed": 5,
+  "tests_pass": true,
+  "test_failures": []
+}
