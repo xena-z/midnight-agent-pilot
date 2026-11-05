@@ -1,0 +1,18 @@
+{
+  "id": "07-fix-it",
+  "title": "Fix-it (seeded bugs from real failures)",
+  "contract_path": "contract/token.compact",
+  "interface": {
+    "circuits": [
+      "mint",
+      "transfer",
+      "burn",
+      "balanceOf",
+      "publicKey"
+    ],
+    "ledger": [
+      "totalSupply"
+    ]
+  },
+  "frozen": true
+}

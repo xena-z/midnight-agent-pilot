@@ -1,0 +1,60 @@
+// Reference solution for eval task 02-token.
+pragma language_version >= 0.22;
+
+import CompactStandardLibrary;
+
+export ledger admin: Bytes<32>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+export ledger totalSupply: Uint<64>;
+
+// The caller's secret key. Identity is derived from it in-circuit (never from ownPublicKey()).
+witness secretKey(): Bytes<32>;
+
+// Domain-separated hash, so the key can't be confused with other hashes of the same secret.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+constructor() {
+  // Publishing the admin's public key is intended; the secret key stays private.
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+circuit balanceAt(account: Bytes<32>): Uint<64> {
+  if (balances.member(account)) {
+    return balances.lookup(account);
+  }
+  return 0;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  return balanceAt(disclose(account));
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(disclose(publicKey(secretKey()) == admin), "Token: caller is not the admin");
+  const recipient = disclose(to);
+  const value = disclose(amount);
+  balances.insert(recipient, (balanceAt(recipient) + value) as Uint<64>);
+  totalSupply = (totalSupply + value) as Uint<64>;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = disclose(publicKey(secretKey()));
+  const recipient = disclose(to);
+  const value = disclose(amount);
+  const senderBalance = balanceAt(sender);
+  assert(senderBalance >= value, "Token: insufficient balance");
+  balances.insert(sender, (senderBalance - value) as Uint<64>);
+  balances.insert(recipient, (balanceAt(recipient) + value) as Uint<64>);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const holder = disclose(publicKey(secretKey()));
+  const value = disclose(amount);
+  const holderBalance = balanceAt(holder);
+  assert(holderBalance >= value, "Token: insufficient balance");
+  balances.insert(holder, (holderBalance - value) as Uint<64>);
+  totalSupply = (totalSupply - value) as Uint<64>;
+}
