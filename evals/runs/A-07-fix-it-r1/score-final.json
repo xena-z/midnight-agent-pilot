@@ -1,0 +1,19 @@
+{
+  "task": "07-fix-it",
+  "src": "~/midnight-eval-sandboxes/A/07-fix-it-r1",
+  "compiler_version": "0.36.0",
+  "found": true,
+  "compact_files_found": [
+    "contract/token.compact"
+  ],
+  "compiled": true,
+  "compile_seconds": 2.1,
+  "compile_output": "Compiling 4 circuits:",
+  "interface_ok": true,
+  "interface_missing": [],
+  "tests_ran": true,
+  "tests_total": 10,
+  "tests_passed": 10,
+  "tests_pass": true,
+  "test_failures": []
+}

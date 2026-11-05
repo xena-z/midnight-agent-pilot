@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-05",
+  "setup": "A",
+  "task": "07-fix-it",
+  "run": 1,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "a88f63a",
+  "interventions": 0,
+  "minutes": 0.4,
+  "plugin_sha": "",
+  "session_id": "0af08f71-b068-445d-9767-9b7c003a5315",
+  "notes": []
+}
