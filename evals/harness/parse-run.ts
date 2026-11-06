@@ -95,7 +95,7 @@ export function compileStats(events: Event[]): { attempts: number; failures: num
 
 /** Setups other than C must never touch Midnight Expert's files. */
 function checkContamination(setup: string, file: string): string[] {
-  if (setup === 'C') return [];
+  if (setup === 'C' || setup === 'P') return [];
   const hits = toolUses(readEvents(file)).filter((t) => /_tooling|midnight-expert/.test(JSON.stringify(t.input)));
   return hits.length ? [`setup ${setup} touched Midnight Expert files in ${hits.length} tool call(s)`] : [];
 }
@@ -123,7 +123,7 @@ function checkInit(setup: string, file: string): string[] {
     if (kapa && kapa.status !== 'connected') problems.push(`Kapa server status=${kapa.status} (sign in under the eval config)`);
     if (mcpTools.some((t: string) => !t.startsWith('mcp__midnight__'))) problems.push('unexpected non-Kapa MCP tools');
   }
-  if (setup === 'C') {
+  if (setup === 'C' || setup === 'P') {
     if (plugins.length !== EXPECTED_PLUGINS) problems.push(`C expects ${EXPECTED_PLUGINS} plugins, got ${plugins.length}`);
   } else if (plugins.length) {
     problems.push(`${setup} must load no plugins, got ${plugins.map((p) => p.name)}`);

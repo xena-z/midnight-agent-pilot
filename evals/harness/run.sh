@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # One scored eval run: fresh sandbox -> headless Claude Code -> independent score -> CSV row.
 #
-# Usage: evals/harness/run.sh <A|B|R|C> <task-id> <run-number> [--smoke]
+# Usage: evals/harness/run.sh <A|B|R|C|P> <task-id> <run-number> [--smoke]
+#   P = C with a patched Midnight Expert clone (upstream PR before/after; see NEXT_STEPS.md)
 #   --smoke  writes to evals/runs/_smoke/ and does not touch results.csv
 #
 # Start it from a plain terminal. The agent is launched with a scrubbed environment (env -i),
@@ -9,7 +10,7 @@
 # Compatible with macOS bash 3.2.
 set -euo pipefail
 
-SETUP="${1:?setup A|B|R|C}"; TASK="${2:?task id}"; RUN="${3:?run number}"; MODE="${4:-}"
+SETUP="${1:?setup A|B|R|C|P}"; TASK="${2:?task id}"; RUN="${3:?run number}"; MODE="${4:-}"
 EVALS="$(cd "$(dirname "$0")/.." && pwd)"; REPO="$(cd "$EVALS/.." && pwd)"; H="$EVALS/harness"
 
 # ---- pinned configuration (record any change in CLAUDE.md's environment record) ----
@@ -18,6 +19,10 @@ EVAL_CONFIG="${EVAL_CONFIG_DIR:-$HOME/.claude-eval}"
 COMPILER_PIN="0.36.0"
 PLUGIN_ROOT="${PLUGIN_ROOT:-$HOME/midnight-eval-sandboxes/_tooling/midnight-expert}"
 PLUGIN_SHA="212d7c2cdadef9a52d84cbd0c83c81bc79930b6b"
+if [ "$SETUP" = "P" ]; then
+  PLUGIN_ROOT="$HOME/midnight-eval-sandboxes/_tooling/me-pr"   # 212d7c2c + compact-core reserved-words patch
+  PLUGIN_SHA="d4d282b6d4093d5f34918cf30162fc9a0ca24621"
+fi
 SANDBOX_ROOT="${SANDBOX_ROOT:-$HOME/midnight-eval-sandboxes}"
 MAX_TURNS=50
 PHASE1_TIMEOUT=1200   # 20 minutes
@@ -27,7 +32,7 @@ CLARIFY_REPLY="Please use your best judgment and complete the task without furth
 
 case "$SETUP" in
   A) MCP="$H/setups/none.mcp.json" ;;
-  B|R|C) MCP="$H/setups/kapa.mcp.json" ;;
+  B|R|C|P) MCP="$H/setups/kapa.mcp.json" ;;
   *) echo "unknown setup $SETUP" >&2; exit 2 ;;
 esac
 
@@ -45,7 +50,7 @@ elif [ -e "$PROJ_STATE" ]; then echo "$PROJ_STATE exists; an earlier run used th
 
 # ---- preflight ----
 compact compile --version | grep -q "^$COMPILER_PIN" || { echo "default compiler is not $COMPILER_PIN" >&2; exit 1; }
-if [ "$SETUP" = "C" ]; then
+if [ "$SETUP" = "C" ] || [ "$SETUP" = "P" ]; then
   [ "$(git -C "$PLUGIN_ROOT" rev-parse HEAD)" = "$PLUGIN_SHA" ] || { echo "plugin clone not at $PLUGIN_SHA" >&2; exit 1; }
 fi
 HARNESS_COMMIT="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo none)"
@@ -66,14 +71,14 @@ python3 -I - "$H/setups/eval-settings.json" "$OUT/settings.json" "$SANDBOX" "$SE
 import json, sys
 src, dst, sandbox, setup, plugin_root = sys.argv[1:]
 d = json.loads(open(src).read().replace("__SANDBOX__", sandbox))
-if setup == "C":
+if setup in ("C", "P"):
     d["permissions"]["additionalDirectories"].append(plugin_root)
     d["sandbox"]["filesystem"]["allowRead"].append(plugin_root)
 open(dst, "w").write(json.dumps(d, indent=2) + "\n")
 PY
 
 PLUGIN_FLAGS=(); PLUGIN_SHA_USED=""
-if [ "$SETUP" = "C" ]; then
+if [ "$SETUP" = "C" ] || [ "$SETUP" = "P" ]; then
   for d in "$PLUGIN_ROOT"/plugins/*/; do PLUGIN_FLAGS+=(--plugin-dir "${d%/}"); done
   PLUGIN_SHA_USED="$PLUGIN_SHA"
 fi
