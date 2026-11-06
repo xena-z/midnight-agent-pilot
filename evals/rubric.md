@@ -11,7 +11,7 @@ One row in `results.csv` per run. `harness/run.sh` fills the automated columns. 
 | `task` / `run` | Task id and run number. |
 | `model` | Model id passed with `--model`. |
 | `compact_version` | Compiler used by the independent scorer (always pinned; `compact compile +0.36.0`). |
-| `harness_commit` | Repo commit when the run started; `-dirty` if `evals/tasks` or `evals/harness` had uncommitted changes. Scored runs should never be dirty. |
+| `harness_commit` | Repo commit when the run started; `-dirty` if `evals/tasks` or `evals/harness` had uncommitted changes. Scored runs should never be dirty. The repo history was rewritten on 2026-11-05 to remove a local path, so these IDs are pre-rewrite; [`commit-map.csv`](commit-map.csv) gives the current commit for each. |
 | `compiled_first` | The independent scorer compiled the agent's contract after phase 1. The agent's own claims don't count. |
 | `compiled_final` | Same, after phase 2 (up to 3 compiler-error pastes). Equals `compiled_first` when no phase 2 was needed. |
 | `tests_pass_first` / `tests_pass_final` | All hidden tests passed. False if the contract didn't compile. |
