@@ -50,6 +50,8 @@ From [`FRICTION_LOG.md`](FRICTION_LOG.md):
 - **F-03:** plugin content changes without version bumps.
 - **F-11:** the reserved word `from`, which tripped every setup, is undocumented.
 
+**Upstream contribution:** a compact-core patch adding a verified reserved-words list, an `export` check, and one line in the startup hook ([`upstream/PR.md`](upstream/PR.md)). Before and after on the token task: docs alone, 3 of 3 runs still hit `from`, because agents never opened the reference files. Docs plus the startup line, 2 of 3. Agents use what's put in front of them, not what's merely available.
+
 ## Next
 
 See [`NEXT_STEPS.md`](NEXT_STEPS.md).

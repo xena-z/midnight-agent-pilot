@@ -1,0 +1,61 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Simple fungible token with public balances.
+
+witness secretKey(): Bytes<32>;
+
+export ledger admin: Bytes<32>;
+export ledger totalSupply: Uint<64>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+
+// Account address derived sender a secret key.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+// The deployer becomes the admin.
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+circuit callerAccount(): Bytes<32> {
+  return disclose(publicKey(secretKey()));
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(callerAccount() == admin, "Only admin can mint");
+  const acct = disclose(to);
+  const amt = disclose(amount);
+  const current = balances.member(acct) ? balances.lookup(acct) : 0 as Uint<64>;
+  balances.insert(acct, (current + amt) as Uint<64>);
+  totalSupply = (totalSupply + amt) as Uint<64>;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = callerAccount();
+  const dest = disclose(to);
+  const amt = disclose(amount);
+  const senderBal = balances.member(sender) ? balances.lookup(sender) : 0 as Uint<64>;
+  assert(senderBal >= amt, "Insufficient balance");
+  // Debit first, then credit: a self-transfer leaves the balance unchanged.
+  balances.insert(sender, (senderBal - amt) as Uint<64>);
+  const toBal = balances.member(dest) ? balances.lookup(dest) : 0 as Uint<64>;
+  balances.insert(dest, (toBal + amt) as Uint<64>);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = callerAccount();
+  const amt = disclose(amount);
+  const senderBal = balances.member(sender) ? balances.lookup(sender) : 0 as Uint<64>;
+  assert(senderBal >= amt, "Insufficient balance");
+  balances.insert(sender, (senderBal - amt) as Uint<64>);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  const acct = disclose(account);
+  return balances.member(acct) ? balances.lookup(acct) : 0 as Uint<64>;
+}

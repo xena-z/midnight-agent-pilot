@@ -1,0 +1,77 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Simple fungible token with balances kept on the public ledger.
+
+// Admin account (derived from the deployer's secret key). Set once at deploy.
+export sealed ledger admin: Bytes<32>;
+
+// Public balances, keyed by account address. Absent key means balance 0.
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+
+// Invariant: always equals the sum of all values in `balances`.
+export ledger totalSupply: Uint<64>;
+
+witness secretKey(): Bytes<32>;
+
+// Account address for a secret key.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+// Caller's account address. Public by design: it is used as a ledger key.
+circuit caller(): Bytes<32> {
+  return disclose(publicKey(secretKey()));
+}
+
+circuit balanceInternal(account: Bytes<32>): Uint<64> {
+  return balances.member(account) ? balances.lookup(account) : 0;
+}
+
+circuit credit(account: Bytes<32>, amount: Uint<64>): [] {
+  const bal = balanceInternal(account);
+  // Cannot overflow: bal <= totalSupply and totalSupply is checked in mint.
+  balances.insert(account, (bal + amount) as Uint<64>);
+}
+
+circuit debit(account: Bytes<32>, amount: Uint<64>): [] {
+  const bal = balanceInternal(account);
+  assert(bal >= amount, "Insufficient balance");
+  balances.insert(account, (bal - amount) as Uint<64>);
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(caller() == admin, "Only admin can mint");
+  const to_ = disclose(to);
+  const amt = disclose(amount);
+  const supply = totalSupply;
+  // Reject overflow of totalSupply (and therefore of any balance).
+  assert(supply <= 18446744073709551615 - amt, "Total supply overflow");
+  credit(to_, amt);
+  totalSupply = (supply + amt) as Uint<64>;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = caller();
+  const to_ = disclose(to);
+  const amt = disclose(amount);
+  debit(sender, amt);
+  credit(to_, amt);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = caller();
+  const amt = disclose(amount);
+  debit(sender, amt);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  return balanceInternal(disclose(account));
+}

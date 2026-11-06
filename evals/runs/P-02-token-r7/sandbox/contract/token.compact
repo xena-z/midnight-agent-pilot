@@ -1,0 +1,67 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Simple fungible token with balances on the public ledger.
+// Accounts are identified by a 32-byte address derived from a secret key.
+
+export ledger totalSupply: Uint<64>;
+export ledger admin: Bytes<32>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+
+witness secretKey(): Bytes<32>;
+
+// Account address for a secret key (domain-separated hash).
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+// The deployer becomes the admin.
+constructor() {
+  totalSupply = 0;
+  admin = disclose(publicKey(secretKey()));
+}
+
+circuit callerAccount(): Bytes<32> {
+  return publicKey(secretKey());
+}
+
+circuit balanceOrZero(account: Bytes<32>): Uint<64> {
+  return balances.member(account) ? balances.lookup(account) : 0;
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(callerAccount() == admin, "Only admin can mint");
+  const dest = disclose(to);
+  const amt = disclose(amount);
+  // Uint<64> arithmetic fails if either result would overflow.
+  const newSupply = (totalSupply + amt) as Uint<64>;
+  const newBalance = (balanceOrZero(dest) + amt) as Uint<64>;
+  balances.insert(dest, newBalance);
+  totalSupply = newSupply;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = disclose(callerAccount());
+  const dest = disclose(to);
+  const amt = disclose(amount);
+  const senderBal = balanceOrZero(sender);
+  assert(senderBal >= amt, "Insufficient balance");
+  // Debit first, then credit, so a self-transfer leaves the balance unchanged.
+  balances.insert(sender, (senderBal - amt) as Uint<64>);
+  const newDest = (balanceOrZero(dest) + amt) as Uint<64>;
+  balances.insert(dest, newDest);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = disclose(callerAccount());
+  const amt = disclose(amount);
+  const senderBal = balanceOrZero(sender);
+  assert(senderBal >= amt, "Insufficient balance");
+  balances.insert(sender, (senderBal - amt) as Uint<64>);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  return balanceOrZero(disclose(account));
+}

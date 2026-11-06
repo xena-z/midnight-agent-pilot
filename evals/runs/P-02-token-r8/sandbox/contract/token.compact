@@ -1,0 +1,55 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Simple fungible token with public balances.
+
+export ledger admin: Bytes<32>;
+export ledger totalSupply: Uint<64>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+
+witness secretKey(): Bytes<32>;
+
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  const a = disclose(account);
+  return balances.member(a) ? balances.lookup(a) : 0;
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  assert(publicKey(secretKey()) == admin, "Only admin can mint");
+  const t = disclose(to);
+  const amt = disclose(amount);
+  const newSupply = (totalSupply + amt) as Uint<64>; // fails on overflow
+  const newBal = (balanceOf(t) + amt) as Uint<64>;
+  totalSupply = newSupply;
+  balances.insert(t, newBal);
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const caller = disclose(publicKey(secretKey()));
+  const t = disclose(to);
+  const amt = disclose(amount);
+  const bal = balanceOf(caller);
+  assert(bal >= amt, "Insufficient balance");
+  balances.insert(caller, (bal - amt) as Uint<64>);
+  // re-read so a self-transfer leaves the balance unchanged
+  balances.insert(t, (balanceOf(t) + amt) as Uint<64>);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const caller = disclose(publicKey(secretKey()));
+  const amt = disclose(amount);
+  const bal = balanceOf(caller);
+  assert(bal >= amt, "Insufficient balance");
+  balances.insert(caller, (bal - amt) as Uint<64>);
+  totalSupply = (totalSupply - amt) as Uint<64>;
+}

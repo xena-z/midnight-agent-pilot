@@ -1,0 +1,62 @@
+pragma language_version >= 0.20;
+
+import CompactStandardLibrary;
+
+// Public ledger state
+export ledger admin: Bytes<32>;
+export ledger totalSupply: Uint<64>;
+export ledger balances: Map<Bytes<32>, Uint<64>>;
+
+witness secretKey(): Bytes<32>;
+
+// Account address derived from a secret key.
+export pure circuit publicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "token:pk:"), sk]);
+}
+
+// The deployer becomes the admin.
+constructor() {
+  admin = disclose(publicKey(secretKey()));
+  totalSupply = 0;
+}
+
+circuit balance(account: Bytes<32>): Uint<64> {
+  return balances.member(account) ? balances.lookup(account) : 0;
+}
+
+export circuit balanceOf(account: Bytes<32>): Uint<64> {
+  return balance(disclose(account));
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<64>): [] {
+  const caller = publicKey(secretKey());
+  assert(disclose(caller == admin), "Only the admin can mint");
+  const dTo = disclose(to);
+  const dAmount = disclose(amount);
+  // Uint<64> arithmetic is checked: overflow makes the circuit fail,
+  // so balances and totalSupply can never diverge.
+  const newBalance = (balance(dTo) + dAmount) as Uint<64>;
+  const newSupply = (totalSupply + dAmount) as Uint<64>;
+  balances.insert(dTo, newBalance);
+  totalSupply = newSupply;
+}
+
+export circuit transfer(to: Bytes<32>, amount: Uint<64>): [] {
+  const sender = disclose(publicKey(secretKey()));
+  const dTo = disclose(to);
+  const dAmount = disclose(amount);
+  const fromBalance = balance(sender);
+  assert(fromBalance >= dAmount, "Insufficient balance");
+  balances.insert(sender, (fromBalance - dAmount) as Uint<64>);
+  // Re-read after the debit so a self-transfer is a no-op.
+  balances.insert(dTo, (balance(dTo) + dAmount) as Uint<64>);
+}
+
+export circuit burn(amount: Uint<64>): [] {
+  const sender = disclose(publicKey(secretKey()));
+  const dAmount = disclose(amount);
+  const fromBalance = balance(sender);
+  assert(fromBalance >= dAmount, "Insufficient balance");
+  balances.insert(sender, (fromBalance - dAmount) as Uint<64>);
+  totalSupply = (totalSupply - dAmount) as Uint<64>;
+}

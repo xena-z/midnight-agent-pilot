@@ -1,0 +1,42 @@
+From 5697c55893b8333140700fa2d5794b02bbf20f25 Mon Sep 17 00:00:00 2001
+From: Z <212753116+xena-z@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 20:58:19 -0500
+Subject: [PATCH 2/2] feat(compact-core): name common reserved words in
+ SessionStart context
+
+In the pilot, agents never opened compact-core reference files during
+short tasks, so a docs-only fix did not reach them (3 of 3 runs still
+hit `const from`). SessionStart context is the one channel every
+session sees; add one line naming the keywords agents most often reuse
+as variable names, pointing to the full list.
+
+Signed-off-by: Z <212753116+xena-z@users.noreply.github.com>
+---
+ plugins/compact-core/scripts/SessionStart.sh | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/plugins/compact-core/scripts/SessionStart.sh b/plugins/compact-core/scripts/SessionStart.sh
+index 56bfa19..2ffb517 100755
+--- a/plugins/compact-core/scripts/SessionStart.sh
++++ b/plugins/compact-core/scripts/SessionStart.sh
+@@ -15,6 +15,8 @@ The newest published compiler may outpace live-network support — prefer the la
+ 
+ All `@midnight-ntwrk/*` packages are published on public npm. Do not add custom registry configuration — no `.npmrc` or `.yarnrc.yml` registry overrides. Verify package versions with `npm view`, never from memory.
+ 
++These Compact keywords are not valid names: `from`, `as`, `of`, `type`, `map`, `slice`, `default`, `new` (write `sender`, not `from`). Full list: `compact-language-ref` → `references/troubleshooting.md` → "Reserved Words".
++
+ You should check for new compact developer tools, compact compiler, and Midnight SDK versions regularly.
+ 
+ ```
+@@ -26,7 +28,7 @@ npm view <package-name> version # check for latest version of <package-name>
+ # Pre-built fallback JSON containing only the static context.
+ # Used whenever jq is missing or anything else goes wrong — no escaping needed
+ # because this is a known-safe literal string.
+-FALLBACK_JSON='{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The Midnight Network is under active development with frequent breaking changes. Do not assume stability across versions.\n\nThe newest published compiler may outpace live-network support — prefer the latest **network-supported** compiler over the absolute latest for anything you intend to deploy. \"Latest available\" is not the same as \"latest supported\".\n\nAll `@midnight-ntwrk/*` packages are published on public npm. Do not add custom registry configuration — no `.npmrc` or `.yarnrc.yml` registry overrides. Verify package versions with `npm view`, never from memory.\n\nYou should check for new compact developer tools, compact compiler, and Midnight SDK versions regularly.\n\n```\ncompact check # check for new compact compiler versions (cached with 15m TTL)\ncompact self check # check for new compact developer tools versions (cached with 15m TTL)\nnpm view <package-name> version # check for latest version of <package-name>\n```"}}'
++FALLBACK_JSON='{"continue":true,"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"The Midnight Network is under active development with frequent breaking changes. Do not assume stability across versions.\n\nThe newest published compiler may outpace live-network support — prefer the latest **network-supported** compiler over the absolute latest for anything you intend to deploy. \"Latest available\" is not the same as \"latest supported\".\n\nAll `@midnight-ntwrk/*` packages are published on public npm. Do not add custom registry configuration — no `.npmrc` or `.yarnrc.yml` registry overrides. Verify package versions with `npm view`, never from memory.\n\nThese Compact keywords are not valid names: `from`, `as`, `of`, `type`, `map`, `slice`, `default`, `new` (write `sender`, not `from`). Full list: `compact-language-ref` → `references/troubleshooting.md` → \"Reserved Words\".\n\nYou should check for new compact developer tools, compact compiler, and Midnight SDK versions regularly.\n\n```\ncompact check # check for new compact compiler versions (cached with 15m TTL)\ncompact self check # check for new compact developer tools versions (cached with 15m TTL)\nnpm view <package-name> version # check for latest version of <package-name>\n```"}}'
+ 
+ # --- Catch-all: if anything unexpected happens, emit fallback and exit clean ---
+ trap 'printf "%s\n" "$FALLBACK_JSON"; exit 0' ERR
+-- 
+2.46.0
+
