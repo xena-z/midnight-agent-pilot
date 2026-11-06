@@ -150,5 +150,8 @@ EOF
 
 ROW="$(cd "$EVALS" && npx --no tsx harness/parse-run.ts row "$OUT")"
 if [ "$MODE" = "--smoke" ]; then echo "$ROW" > "$OUT/row.csv"; else echo "$ROW" >> "$EVALS/results.csv"; fi
+# Keep an unedited copy outside the repo, then strip the local home path from the saved records.
+RAW="$SANDBOX_ROOT/_raw-runs/$(basename "$(dirname "$OUT")")/$RUN_ID"; mkdir -p "$(dirname "$RAW")"; rm -rf "$RAW"; cp -R "$OUT" "$RAW"
+"$H/redact-paths.sh" "$OUT"
 echo "[$RUN_ID] done in ${MINUTES} min"
 echo "$ROW"

@@ -32,6 +32,7 @@ Full data: [`evals/results.csv`](evals/results.csv). Transcripts and the agents'
 
 - **Setups:** A is Claude Code alone. B adds the Kapa MCP. R is B plus a two-line rules file saying "compile before saying done". C is B plus all 16 Midnight Expert plugins (GitHub main @ `212d7c2c`). Every setup has the same model (`claude-sonnet-5-5`), Claude Code 2.1.220, Compact compiler 0.36.0, and macOS 26.6.
 - **Harness:** headless Claude Code in a fresh sandbox per run (`evals/harness/run.sh`), using a clean config folder. Each run gets a per-run OS sandbox, so the agent can read only its own folder and the toolchain. A startup check confirms each setup loaded exactly its tools.
+- **Saved records:** transcripts and scores are stored as recorded, except that the local home path is replaced with `~` (`evals/harness/redact-paths.sh`). Rows rebuilt from the edited records match the originals exactly.
 - **Scoring:** the harness compiles each contract itself with the pinned compiler and runs hidden tests against it. Every task has a reference solution that passes, and for the privacy tasks a naive leaky solution that compiles but fails. Manual columns come from reading each contract. See the [rubric](evals/rubric.md).
 
 ## Limits
