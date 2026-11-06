@@ -21,7 +21,7 @@ PLUGIN_ROOT="${PLUGIN_ROOT:-$HOME/midnight-eval-sandboxes/_tooling/midnight-expe
 PLUGIN_SHA="212d7c2cdadef9a52d84cbd0c83c81bc79930b6b"
 if [ "$SETUP" = "P" ]; then
   PLUGIN_ROOT="$HOME/midnight-eval-sandboxes/_tooling/me-pr"   # 212d7c2c + compact-core reserved-words patch
-  PLUGIN_SHA="d4d282b6d4093d5f34918cf30162fc9a0ca24621"
+  PLUGIN_SHA="5697c55893b8333140700fa2d5794b02bbf20f25"
 fi
 SANDBOX_ROOT="${SANDBOX_ROOT:-$HOME/midnight-eval-sandboxes}"
 MAX_TURNS=50
