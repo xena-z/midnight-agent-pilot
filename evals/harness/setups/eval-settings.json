@@ -34,5 +34,10 @@
         "/private/tmp"
       ]
     }
+  },
+  "enabledPlugins": {
+    "legal@synced": false,
+    "product-management@synced": false,
+    "cowork-plugin-management@synced": false
   }
 }
