@@ -1,5 +1,7 @@
 # PR: compact-core — document reserved words; name the common ones at session start
 
+Opened as https://github.com/midnightntwrk/midnight-expert/pull/290 on 2026-11-06.
+
 Target: `midnightntwrk/midnight-expert` `main` (based on `212d7c2c`). Branch: `xena-reserved-words`. Patches: [`0001`](0001-docs-compact-core-document-reserved-words-and-when-l.patch), [`0002`](0002-feat-compact-core-name-common-reserved-words-in-Sess.patch).
 
 ## Overview
