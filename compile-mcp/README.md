@@ -63,7 +63,7 @@ From source: `npm ci && npm run build`, then use `node /path/to/compile-mcp/dist
 
 ## Does it help?
 
-In the [Midnight agent pilot](../README.md), setup M (Claude Code + Kapa + this server, with no plugins and no rules file) ran the same 11 tasks as the other setups:
+In the [Midnight agent pilot](../README.md), setup M (Claude Code + Kapa + this server, with no plugins and no rules file) ran the same 11 runs (7 tasks) as the other setups:
 - **Tool use:** every agent called `compile_contract` (11 of 11), usually after `toolchain_info`. All their compiling went through it, though they could also have run the compiler from a shell.
 - **Results:** every hidden test passed (11 of 11), for $0.95 in total.
 
