@@ -3,3 +3,4 @@ node_modules/
 evals/.work/
 evals/runs/_smoke/
 contract/managed/
+compile-mcp/dist/

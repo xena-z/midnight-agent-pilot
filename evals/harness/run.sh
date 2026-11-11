@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # One scored eval run: fresh sandbox -> headless Claude Code -> independent score -> CSV row.
 #
-# Usage: evals/harness/run.sh <A|B|R|C|P> <task-id> <run-number> [--smoke]
+# Usage: evals/harness/run.sh <A|B|R|C|P|M> <task-id> <run-number> [--smoke]
+#   M = B + the local compile MCP server (compile-mcp/, built and copied outside the repo per run)
 #   P = C with a patched Midnight Expert clone (upstream PR before/after; see NEXT_STEPS.md)
 #   --smoke  writes to evals/runs/_smoke/ and does not touch results.csv
 #
@@ -10,7 +11,7 @@
 # Compatible with macOS bash 3.2.
 set -euo pipefail
 
-SETUP="${1:?setup A|B|R|C|P}"; TASK="${2:?task id}"; RUN="${3:?run number}"; MODE="${4:-}"
+SETUP="${1:?setup A|B|R|C|P|M}"; TASK="${2:?task id}"; RUN="${3:?run number}"; MODE="${4:-}"
 EVALS="$(cd "$(dirname "$0")/.." && pwd)"; REPO="$(cd "$EVALS/.." && pwd)"; H="$EVALS/harness"
 
 # ---- pinned configuration (record any change in CLAUDE.md's environment record) ----
@@ -33,6 +34,7 @@ CLARIFY_REPLY="Please use your best judgment and complete the task without furth
 case "$SETUP" in
   A) MCP="$H/setups/none.mcp.json" ;;
   B|R|C|P) MCP="$H/setups/kapa.mcp.json" ;;
+  M) MCP="" ;;   # written per run below (needs the sandbox path)
   *) echo "unknown setup $SETUP" >&2; exit 2 ;;
 esac
 
@@ -54,13 +56,30 @@ if [ "$SETUP" = "C" ] || [ "$SETUP" = "P" ]; then
   [ "$(git -C "$PLUGIN_ROOT" rev-parse HEAD)" = "$PLUGIN_SHA" ] || { echo "plugin clone not at $PLUGIN_SHA" >&2; exit 1; }
 fi
 HARNESS_COMMIT="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo none)"
-[ -n "$(git -C "$REPO" status --porcelain -- evals/tasks evals/harness 2>/dev/null)" ] && HARNESS_COMMIT="$HARNESS_COMMIT-dirty"
+[ -n "$(git -C "$REPO" status --porcelain -- evals/tasks evals/harness compile-mcp/src compile-mcp/package.json 2>/dev/null)" ] && HARNESS_COMMIT="$HARNESS_COMMIT-dirty"
 
 mkdir -p "$OUT" "$SANDBOX"
 cp -R "$TASK_DIR/starter/." "$SANDBOX/"
 find "$SANDBOX" -name .gitkeep -delete
 [ "$SETUP" = "R" ] && cp "$H/setups/R.CLAUDE.md" "$SANDBOX/CLAUDE.md"
 PROMPT="$(cat "$TASK_DIR/prompt.md")"
+
+# Setup M: build the compile MCP server from this commit and run it from a copy outside the repo,
+# so nothing the agent can see points into the repo. Its workspace root is the sandbox.
+if [ "$SETUP" = "M" ]; then
+  CMCP="$SANDBOX_ROOT/_tooling/compile-mcp"
+  (cd "$REPO/compile-mcp" && npx --no tsc) || { echo "compile-mcp build failed" >&2; exit 1; }
+  mkdir -p "$CMCP" && rsync -a --delete --exclude test --exclude src "$REPO/compile-mcp/" "$CMCP/"
+  MCP="$OUT/mcp.json"
+  python3 -I - "$MCP" "$(command -v node)" "$CMCP/dist/cli.js" "$SANDBOX" "$PATH" "$HOME" <<'PY'
+import json, sys
+dst, node, cli, sandbox, path, home = sys.argv[1:]
+json.dump({"mcpServers": {
+  "midnight": {"type": "http", "url": "https://midnight.mcp.kapa.ai"},
+  "compact": {"type": "stdio", "command": node, "args": [cli, "--root", sandbox], "env": {"PATH": path, "HOME": home}},
+}}, open(dst, "w"), indent=2)
+PY
+fi
 
 # Per-run access policy (same for every setup): the agent can read and write its own sandbox, the toolchain,
 # caches, /tmp and the pinned plugin clone, and nothing else in $HOME. Enforced by the OS for Bash

@@ -53,8 +53,11 @@ function isCompactEdit(t: { name: string; input: any }): boolean {
   return false;
 }
 
+// Setup M compiles through the compile MCP server instead of Bash.
+const MCP_COMPILE = 'mcp__compact__compile_contract';
+
 function isCompile(t: { name: string; input: any }): boolean {
-  return t.name === 'Bash' && COMPILE_RE.test(String(t.input.command ?? ''));
+  return t.name === MCP_COMPILE || (t.name === 'Bash' && COMPILE_RE.test(String(t.input.command ?? '')));
 }
 
 /** Did the agent run the compiler after its last edit to a .compact file (phase 1 only)? */
@@ -82,6 +85,12 @@ export function compileStats(events: Event[]): { attempts: number; failures: num
   for (const e of events) {
     if (e.type !== 'assistant') continue;
     for (const b of e.message?.content ?? []) {
+      if (b.type === 'tool_use' && b.name === MCP_COMPILE) {
+        attempts++;
+        const r = resultsById.get(b.id);
+        if (r && (r.isError || /"ok":\s*false/.test(r.text))) failures++;
+        continue;
+      }
       if (b.type !== 'tool_use' || b.name !== 'Bash') continue;
       const cmd = String(b.input?.command ?? '');
       if (!COMPILE_RE.test(cmd) || /--(version|language-version|runtime-version|ledger-version|help)\b/.test(cmd)) continue;
@@ -116,6 +125,12 @@ function checkInit(setup: string, file: string): string[] {
   if (setup === 'A') {
     if (servers.length) problems.push(`A must load no MCP servers, got ${servers.map((s) => s.name)}`);
     if (mcpTools.length) problems.push(`A must have no MCP tools, got ${mcpTools.length}`);
+  } else if (setup === 'M') {
+    const names = servers.map((s) => s.name).sort().join(',');
+    if (names !== 'compact,midnight') problems.push(`M expects servers [compact,midnight], got [${names}]`);
+    for (const s of servers) if (s.status !== 'connected') problems.push(`${s.name} server status=${s.status}`);
+    if (mcpTools.some((t: string) => !/^mcp__(midnight|compact)__/.test(t))) problems.push('unexpected MCP tools');
+    if (!mcpTools.includes(MCP_COMPILE)) problems.push('compile_contract tool missing');
   } else {
     const names = servers.map((s) => s.name).sort().join(',');
     if (names !== 'midnight') problems.push(`expected only the Kapa server "midnight", got [${names}]`);

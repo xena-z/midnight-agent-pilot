@@ -1,0 +1,43 @@
+{
+  "name": "compact-compile-mcp",
+  "version": "0.1.0",
+  "description": "Unofficial MCP server that compiles Compact (Midnight) smart contracts with your locally installed compiler. Not affiliated with Midnight Foundation.",
+  "main": "dist/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "keywords": [
+    "mcp",
+    "compact",
+    "midnight",
+    "zero-knowledge",
+    "compiler"
+  ],
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  },
+  "bin": {
+    "compact-compile-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "Apache-2.0"
+}
