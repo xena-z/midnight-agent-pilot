@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-11",
+  "setup": "M",
+  "task": "03-private-input",
+  "run": 1,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "31b8541",
+  "interventions": 0,
+  "minutes": 0.3,
+  "plugin_sha": "",
+  "session_id": "114251f1-9b3b-4457-b8f8-d2ab08b7c4a0",
+  "notes": []
+}

@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "midnight": {
+      "type": "http",
+      "url": "https://midnight.mcp.kapa.ai"
+    },
+    "compact": {
+      "type": "stdio",
+      "command": "~/.nvm/versions/node/v22.23.1/bin/node",
+      "args": [
+        "~/midnight-eval-sandboxes/_tooling/compile-mcp/dist/cli.js",
+        "--root",
+        "~/midnight-eval-sandboxes/M/04-disclosure-trap-r2"
+      ],
+      "env": {
+        "PATH": "~/.local/bin:~/.nvm/versions/node/v22.23.1/bin:/opt/homebrew/sbin:/opt/homebrew/sbin:/usr/local/sbin:/usr/local/sbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:~/.cargo/bin:~/my-binaries/compactc",
+        "HOME": "~"
+      }
+    }
+  }
+}

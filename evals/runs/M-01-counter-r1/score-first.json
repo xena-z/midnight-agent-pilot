@@ -1,0 +1,19 @@
+{
+  "task": "01-counter",
+  "src": "~/midnight-eval-sandboxes/M/01-counter-r1",
+  "compiler_version": "0.36.0",
+  "found": true,
+  "compact_files_found": [
+    "contract/counter.compact"
+  ],
+  "compiled": true,
+  "compile_seconds": 0.4,
+  "compile_output": "Compiling 2 circuits:",
+  "interface_ok": true,
+  "interface_missing": [],
+  "tests_ran": true,
+  "tests_total": 4,
+  "tests_passed": 4,
+  "tests_pass": true,
+  "test_failures": []
+}

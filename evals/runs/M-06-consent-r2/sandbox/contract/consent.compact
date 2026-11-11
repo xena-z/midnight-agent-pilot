@@ -1,0 +1,66 @@
+pragma language_version >= 0.28;
+
+import CompactStandardLibrary;
+
+// Privacy-preserving consent registry (demo, no real data).
+//
+// Registration leaf (hidden in `consents`):
+//   leaf = persistentCommit([studyId, secret], randomness)
+// The commitment hides both the study ID and the participant's secret.
+//
+// Revocation tag (published in `revoked`):
+//   tag = persistentHash(["consent:revoke", secret, studyId])
+// It is derived from the secret, so only the registrant can compute it, but it
+// cannot be linked to the leaf without knowing the secret and randomness.
+
+export ledger consents: HistoricMerkleTree<10, Bytes<32>>;
+export ledger revoked: Set<Bytes<32>>;
+export ledger answered: Map<Bytes<32>, Bytes<32>>;
+export ledger registrations: Counter;
+
+witness consentSecret(): Bytes<32>;
+witness consentRandomness(): Bytes<32>;
+witness consentPath(commitment: Bytes<32>): MerkleTreePath<10, Bytes<32>>;
+
+circuit leafOf(studyId: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<2, Bytes<32>>>(
+    [studyId, consentSecret()],
+    consentRandomness()
+  );
+}
+
+circuit revocationTag(studyId: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "consent:revoke"), consentSecret(), studyId]
+  );
+}
+
+// Proves (in zero knowledge) that the caller's leaf for `studyId` is in the tree.
+circuit assertRegistered(studyId: Bytes<32>): [] {
+  const leaf = leafOf(studyId);
+  const path = consentPath(leaf);
+  // The witness-supplied path must be for *our* leaf, not someone else's.
+  assert(path.leaf == leaf, "Path is for a different leaf");
+  const root = merkleTreePathRoot<10, Bytes<32>>(path);
+  assert(consents.checkRoot(disclose(root)), "Consent not registered");
+}
+
+export circuit register(studyId: Bytes<32>): [] {
+  consents.insert(leafOf(studyId));
+  registrations.increment(1);
+}
+
+export circuit prove(studyId: Bytes<32>, challenge: Bytes<32>): [] {
+  assertRegistered(studyId);
+  assert(!revoked.member(disclose(revocationTag(studyId))), "Consent revoked");
+  // The challenge and study ID are intentionally public: the clinic needs to
+  // see which challenge was answered for which study.
+  const c = disclose(challenge);
+  assert(!answered.member(c), "Challenge already answered");
+  answered.insert(c, disclose(studyId));
+}
+
+export circuit revoke(studyId: Bytes<32>): [] {
+  assertRegistered(studyId);
+  revoked.insert(disclose(revocationTag(studyId)));
+}

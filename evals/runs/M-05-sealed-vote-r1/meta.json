@@ -1,0 +1,13 @@
+{
+  "date": "2026-11-11",
+  "setup": "M",
+  "task": "05-sealed-vote",
+  "run": 1,
+  "model": "claude-sonnet-5-5",
+  "harness_commit": "31b8541",
+  "interventions": 0,
+  "minutes": 0.4,
+  "plugin_sha": "",
+  "session_id": "97d8f75c-7ab4-4715-9559-33a4756e6304",
+  "notes": []
+}

@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "blockReadsOutsideWorkingDirectories": true,
+    "additionalDirectories": [
+      "~/.compact"
+    ],
+    "deny": [
+      "Read(~/midnight-agent-pilot/**)",
+      "Read(~/.claude-eval/projects/**)",
+      "Read(~/.claude/**)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": [
+        "~/"
+      ],
+      "allowRead": [
+        "~/midnight-eval-sandboxes/M/06-consent-r1",
+        "~/.compact",
+        "~/.local/bin",
+        "~/.nvm",
+        "~/.npm",
+        "~/.cache/midnight"
+      ],
+      "allowWrite": [
+        "~/midnight-eval-sandboxes/M/06-consent-r1",
+        "~/.cache/midnight",
+        "~/.npm",
+        "/tmp",
+        "/private/tmp"
+      ]
+    }
+  },
+  "enabledPlugins": {
+    "legal@synced": false,
+    "product-management@synced": false,
+    "cowork-plugin-management@synced": false
+  }
+}
