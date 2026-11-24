@@ -135,7 +135,7 @@ Log every snag in `FRICTION_LOG.md` as it happens, including setup.
 
 ### Setups
 
-Same model, effort settings, machine, Claude Code version, Compact toolchain and permission flags in all four. Web search and fetch stay enabled in all four (Claude Code's default); the harness logs every web lookup.
+Same model, effort settings, machine, Claude Code version, Compact toolchain and permission flags in every setup. Web search and fetch stay enabled in every setup (Claude Code's default); the harness logs every web lookup.
 
 | ID | Setup | What it represents |
 |----|-------|--------------------|
@@ -143,10 +143,12 @@ Same model, effort settings, machine, Claude Code version, Compact toolchain and
 | B | A + Kapa MCP | Docs grounding only: roughly what a Cursor/Copilot user can get today |
 | R | B + a short rules file (`CLAUDE.md` in the sandbox) telling the agent to compile with the Compact CLI and fix all errors before saying it's done | Docs plus a cheap verification habit any agent could get from a rules file |
 | C | B + all 16 Midnight Expert plugins (GitHub main @ `212d7c2c`) | Midnight's recommended full setup |
+| P | C with the PR #290 patch (Midnight Expert @ `5697c55`, `midnight-expert#290`) | Measures the upstream contribution (Part 3); task 02 only, 6 runs |
+| M | B + the local compile MCP server (`compile-mcp/`, built and copied outside the repo per run) | Part 4: a compile tool any MCP client can use, with no plugins and no rules file |
 
 A→B shows what docs grounding adds. B→R shows what a compile-before-done rule adds. R→C shows what Midnight Expert adds beyond docs and compile discipline.
 
-The Compact CLI is installed in all four setups, because a real developer would have it. The question is whether the agent knows to use it.
+The Compact CLI is installed in every setup, because a real developer would have it. The question is whether the agent knows to use it.
 
 Setup C's plugin set: the 16 plugins `install.sh` installs, loaded with `--plugin-dir` from a local clone of GitHub main checked out at `212d7c2c` (`~/midnight-eval-sandboxes/_tooling/midnight-expert`). `run.sh` refuses to start a C run if the clone has moved. Optional tier 2: the same tasks against the stable marketplace, to measure what its staleness costs users.
 
@@ -230,11 +232,11 @@ date,setup,task,run,model,compact_version,harness_commit,compiled_first,compiled
 | `@midnight-ntwrk/compact-runtime` version | 0.21.0 (hidden tests; matches compiler 0.36.0) |
 | Midnight Expert source and install method | GitHub main @ `212d7c2c` (2026-10-28). Repo build: project-scope GitHub marketplace. Eval runs: `--plugin-dir` from a pinned local clone |
 | Midnight Expert plugins and versions (setup C) | compact-cli-dev 0.6.0, compact-core 0.12.0, compact-examples 0.5.0, core-concepts 0.3.2, midnight-cq 0.4.0, midnight-dapp-dev 0.6.0, midnight-expert 0.8.1, midnight-fact-check 0.5.0, midnight-indexer 0.3.0, midnight-node 0.3.0, midnight-plugin-utils 0.1.1, midnight-status-codes 0.11.0, midnight-tooling 0.4.0, midnight-verify 0.14.1, midnight-wallet 0.6.0, proof-server 0.2.0 |
-| MCP servers loaded per setup (from the init event) | A: none. B, R, C: `midnight` (Kapa) only. C adds 88 plugin skills and 22 agents, no MCP servers |
+| MCP servers loaded per setup (from the init event) | A: none. B, R, C, P: `midnight` (Kapa) only. C and P add 88 plugin skills and 22 agents, no MCP servers. M: `midnight` (Kapa) + `compact` (compile-mcp 0.1.0) |
 | Baseline loaded in every setup (not Midnight-specific) | Claude Code built-in plugins (`cc-plugin-agents-md`, `cc-plugin-telemetry`, `cc-plugin-privacy`, `cc-plugin-plugin-authoring`, all `@builtin`), Claude Code's bundled skills, and account-synced `anthropic-skills:*` (docs, docx, pdf, pptx, xlsx, …). Identical across setups; the full list is in each run's init event |
 | Kapa MCP URL and auth | https://midnight.mcp.kapa.ai, sign-in required |
 | Docker (only if devnet or proof server is needed) | 28.1.1 (installed; not yet needed) |
-| Dates of runs | |
+| Dates of runs | A, B, R, C, P: 2026-11-05. M: 2026-11-11. 61 scored rows in `evals/results.csv` |
 
 ---
 
@@ -310,13 +312,13 @@ Outline:
 
 ### Definition of done
 
-- [ ] Consent contract compiles, tests pass, `DESIGN.md` decisions recorded, privacy review run and recorded
-- [ ] Every task has a passing reference solution and hidden tests
-- [ ] 28 tier-1 runs scored through the harness, transcripts in `evals/runs/`
-- [ ] `FRICTION_LOG.md` with repro steps
-- [ ] One upstream contribution (PR with before/after, or detailed issue) linked
-- [ ] README findings-first; `NEXT_STEPS.md` grounded in the data
-- [ ] Environment, versions and harness flags recorded
+- [x] Consent contract compiles, tests pass, `DESIGN.md` decisions recorded, privacy review run and recorded
+- [x] Every task has a passing reference solution and hidden tests
+- [x] 28 tier-1 runs scored through the harness, transcripts in `evals/runs/`
+- [x] `FRICTION_LOG.md` with repro steps
+- [x] One upstream contribution (PR with before/after, or detailed issue) linked
+- [x] README findings-first; `NEXT_STEPS.md` grounded in the data
+- [x] Environment, versions and harness flags recorded
 
 ## Kickoff prompt for the first session
 

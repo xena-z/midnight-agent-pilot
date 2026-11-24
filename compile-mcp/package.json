@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "Unofficial MCP server that compiles Compact (Midnight) smart contracts with your locally installed compiler. Not affiliated with Midnight Foundation.",
   "main": "dist/index.js",
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -39,5 +36,14 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xena-z/midnight-agent-pilot.git",
+    "directory": "compile-mcp"
+  },
+  "homepage": "https://github.com/xena-z/midnight-agent-pilot/tree/main/compile-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/xena-z/midnight-agent-pilot/issues"
+  }
 }

@@ -4,7 +4,7 @@ An unofficial MCP server that lets any AI coding agent compile [Compact](https:/
 
 Agents writing Compact often produce code that looks right but doesn't compile: reserved words like `from`, disclosure rules for witness values, renamed ledger operations. This server gives the agent the compiler's real errors, with file, line and column, so it can fix them before saying it's done. The community `midnight-mcp` server used to provide a compile tool but was retired in June 2026. Kapa's Midnight MCP answers docs questions but doesn't compile.
 
-> Not yet published to npm. Until it is, build from source (below) and point your client at `dist/cli.js`.
+> **Not on npm yet.** Until it is, the `npx -y compact-compile-mcp` commands below won't work. Build from source (see the end of this section) and use `node /path/to/compile-mcp/dist/cli.js` in their place.
 
 ## Tools
 

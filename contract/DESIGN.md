@@ -54,3 +54,7 @@ export circuit revoke(studyId: Bytes<32>): [];
 - **Open registration** (from the compact-core review, High): anyone can register any study ID, so a proof shows "someone holds a registration for this study", not that they were enrolled. A real system would gate `register` on a study-authority credential checked in-circuit. Out of scope for this demo.
 - **Tree capacity** (from the compact-core review, High): depth 10 holds 1,024 registrations, and unauthenticated registration can fill it. A real system needs a larger depth, epochs, or gated registration.
 - **Low-entropy secrets** can be brute-forced; the witness must return 32 random bytes.
+
+## Tests
+
+`./contract/test.sh` compiles this contract with the pinned compiler (0.36.0) and runs its 10 tests in a simulator. The tests are in [`evals/tasks/06-consent/hidden-tests/consent.test.ts`](../evals/tasks/06-consent/hidden-tests/consent.test.ts), because they double as the hidden tests for eval task 06. They cover register, prove and revoke; an unregistered prover; another participant's Merkle path; cross-study proofs; replayed challenges; revocation by a non-holder; and checking that the public ledger never holds a secret or randomness. Run `npm ci` in `evals/` first.
